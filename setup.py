@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 import re
 
 with open("loguru/__init__.py", "r") as file:
@@ -22,6 +22,6 @@ setup(
     version=regex_version,
     description='Admin API for pb project',
     author='Vaclav_V',
-    packages=['pb_admin'],
+    packages=find_packages(),
     install_requires=get_requirements(),
 )
