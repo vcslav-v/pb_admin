@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "pb-admin"
+version = "0.1.4"
+description = ""
+authors = ["vaclav-v"]
+readme = "README.md"
+packages = [{include = "pb_admin"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+loguru = "^0.7.2"
+requests = "^2.31.0"
+bs4 = "^0.0.1"
+
+
+[tool.poetry.group.dev.dependencies]
+flake8 = "^6.1.0"
+mypy = "^1.6.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
