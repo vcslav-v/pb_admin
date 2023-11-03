@@ -19,7 +19,7 @@ def get_requirements():
 
 setup(
     name='pb_admin',
-    version=regex_version,
+    version=version,
     description='Admin API for pb project',
     author='Vaclav_V',
     packages=find_packages(),
