@@ -13,8 +13,8 @@ class Tags():
         self.site_url = site_url
 
     def get_list(self) -> list[schemas.Tag]:
-        """Get list of all tags."""
-        tag_idents = []
+        """Get list of all tags in short version id, name, title, description, meta_title, meta_description, no_index."""
+        tags = []
         is_next_page = True
         params = {'perPage': 100}
         while is_next_page:
@@ -23,7 +23,18 @@ class Tags():
             raw_page = resp.json()
 
             for row in raw_page['resources']:
-                tag_idents.append(row['id']['value'])
+                values = {cell['attribute']: cell['value'] for cell in row['fields']}
+                tags.append(
+                    schemas.Tag(
+                        ident=values.get('id'),
+                        name=values.get('name'),
+                        title=values.get('title'),
+                        description=values.get('description'),
+                        meta_title=values.get('meta_title'),
+                        meta_description=values.get('meta_description'),
+                        no_index=values.get('no_index'),
+                    )
+                )
 
             if raw_page.get('next_page_url'):
                 parsed_url = urlparse(raw_page.get('next_page_url'))
@@ -31,10 +42,6 @@ class Tags():
 
             else:
                 is_next_page = False
-
-        tags = []
-        for tag_ident in tag_idents:
-            tags.append(self.get(tag_ident))
 
         return tags
 
