@@ -1,6 +1,6 @@
 """Main module pb_admin project."""
 
-__version__ = '0.1.10'
+__version__ = '0.1.11'
 __author__ = 'Vaclav_V'
 
 import requests

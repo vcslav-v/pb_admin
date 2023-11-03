@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pb-admin"
-version = "0.1.10"
+version = "0.1.11"
 description = ""
 authors = ["vaclav-v"]
 readme = "README.md"
@@ -12,6 +12,8 @@ loguru = "^0.7.2"
 requests = "^2.31.0"
 bs4 = "^0.0.1"
 pydantic = "^2.4.2"
+requests-toolbelt = "^1.0.0"
+pillow = "^10.1.0"
 
 
 [tool.poetry.group.dev.dependencies]
