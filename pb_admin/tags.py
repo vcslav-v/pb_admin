@@ -66,7 +66,7 @@ class Tags():
             f'{self.site_url}/nova-vendor/nova-attach-many/tags/{values["id"]}/attachable/categories'
         )
         raw_categoies = resp.json()
-        tag_categories = raw_categoies['selected']
+        tag_categories = list(set(raw_categoies['selected']))
 
         return schemas.Tag(
             ident=values['id'],
