@@ -29,5 +29,5 @@ class Tag(BaseModel):
     meta_title: Optional[str] = None
     meta_description: Optional[str] = None
     image: Optional[Image] = None
-    no_index: bool = False
+    no_index: bool = True
     category_ids: list[int] = []
