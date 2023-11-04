@@ -100,8 +100,13 @@ class Tags():
             'meta_description': tag.meta_description,
             'no_index': '1' if tag.no_index else '0',
             'categories': str(tag.category_ids),
-            '__media__[meta_image][0]': (tag.image.file_name, tag.image.data, tag.image.mime_type) if tag.image else None,
         }
+        if tag.image:
+            fields['__media__[meta_image][0]'] = (
+                tag.image.file_name,
+                tag.image.data,
+                tag.image.mime_type
+            )
         form = MultipartEncoder(fields, boundary=boundary)
         resp = self.session.post(
             f'{self.site_url}/nova-api/tags?editing=true&editMode=create',
