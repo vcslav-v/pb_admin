@@ -17,7 +17,7 @@ class Image(BaseModel):
     data: Optional[bytes] = None
 
 
-class Cattegory(BaseModel):
+class Category(BaseModel):
     ident: int
     title: str
     is_display: bool

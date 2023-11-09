@@ -8,7 +8,7 @@ class Categories():
         self.session = session
         self.site_url = site_url
 
-    def get_list(self) -> list[schemas.Cattegory]:
+    def get_list(self) -> list[schemas.Category]:
         """Get list of all categories in short version id, title, is_display, headline, weight, is_shown_in_filter."""
         categories = []
         is_next_page = True
@@ -20,7 +20,7 @@ class Categories():
             for row in raw_page['resources']:
                 values = {cell['attribute']: cell['value'] for cell in row['fields']}
                 categories.append(
-                    schemas.Cattegory(
+                    schemas.Category(
                         ident=values.get('id'),
                         title=values.get('title'),
                         is_display=values.get('display_menu'),

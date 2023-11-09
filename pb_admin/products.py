@@ -8,25 +8,25 @@ class Products():
         self.session = session
         self.site_url = site_url
 
-    def get_list(self, search: str = None, cattegory_id: int = None) -> list[schemas.Product]:
+    def get_list(self, search: str = None, category_id: int = None) -> list[schemas.Product]:
         all_products = []
-        all_products.extend(self.get_freebie_list(search, cattegory_id))
-        all_products.extend(self.get_premium_list(search, cattegory_id))
-        all_products.extend(self.get_plus_list(search, cattegory_id))
+        all_products.extend(self.get_freebie_list(search, category_id))
+        all_products.extend(self.get_premium_list(search, category_id))
+        all_products.extend(self.get_plus_list(search, category_id))
         return all_products
 
-    def get_freebie_list(self, search: str = None, cattegory_id: int = None) -> list[schemas.Product]:
+    def get_freebie_list(self, search: str = None, category_id: int = None) -> list[schemas.Product]:
         products = []
         is_next_page = True
         params = {
             'perPage': 100,
             'search': search
         }
-        if cattegory_id:
+        if category_id:
             params.update(
                 {
                     'viaResource': 'categories',
-                    'viaResourceId': cattegory_id,
+                    'viaResourceId': category_id,
                     'viaRelationship': 'freebies',
                     'relationshipType': 'morphToMany'
                 }
@@ -60,18 +60,18 @@ class Products():
                 is_next_page = False
         return products
 
-    def get_premium_list(self, search: str = None, cattegory_id: int = None) -> list[schemas.Product]:
+    def get_premium_list(self, search: str = None, category_id: int = None) -> list[schemas.Product]:
         products = []
         is_next_page = True
         params = {
             'perPage': 100,
             'search': search
         }
-        if cattegory_id:
+        if category_id:
             params.update(
                 {
                     'viaResource': 'categories',
-                    'viaResourceId': cattegory_id,
+                    'viaResourceId': category_id,
                     'viaRelationship': 'premiums',
                     'relationshipType': 'morphToMany'
                 }
@@ -104,18 +104,18 @@ class Products():
                 is_next_page = False
         return products
 
-    def get_plus_list(self, search: str = None, cattegory_id: int = None) -> list[schemas.Product]:
+    def get_plus_list(self, search: str = None, category_id: int = None) -> list[schemas.Product]:
         products = []
         is_next_page = True
         params = {
             'perPage': 100,
             'search': search
         }
-        if cattegory_id:
+        if category_id:
             params.update(
                 {
                     'viaResource': 'categories',
-                    'viaResourceId': cattegory_id,
+                    'viaResourceId': category_id,
                     'viaRelationship': 'pluses',
                     'relationshipType': 'morphToMany'
                 }
