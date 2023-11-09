@@ -1,6 +1,6 @@
 """Main module pb_admin project."""
 
-__version__ = '0.1.16'
+__version__ = '0.1.17'
 __author__ = 'Vaclav_V'
 __all__ = ['PbSession', 'schemas']
 
@@ -11,6 +11,7 @@ from bs4 import BeautifulSoup
 
 from pb_admin.tags import Tags
 from pb_admin.categories import Categories
+from pb_admin.products import Products
 from pb_admin import schemas
 
 SITE_URL = os.environ.get('SITE_URL', '')
@@ -34,6 +35,7 @@ class PbSession():
 
         self.tags = Tags(self.session, self.site_url)
         self.categories = Categories(self.session, self.site_url)
+        self.products = Products(self.session, self.site_url)
 
     def _login(self):
         resp = self.session.get(f'{self.site_url}/admin/login')
