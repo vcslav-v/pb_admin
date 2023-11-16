@@ -3,6 +3,7 @@ from typing import Optional
 from datetime import datetime
 from enum import Enum
 
+
 class ProductType(str, Enum):
     freebie = 'freebie'
     premium = 'premium'
@@ -40,9 +41,13 @@ class Tag(BaseModel):
     category_ids: list[int] = []
 
 
-class Feature(BaseModel):
+class FeatureShort(BaseModel):
     title: str
     value: str
+
+
+class Feature(FeatureShort):
+    link: Optional[str] = None
 
 
 class Product(BaseModel):
@@ -78,10 +83,36 @@ class Product(BaseModel):
     meta_title: Optional[str] = None
     meta_description: Optional[str] = None
     meta_keywords: Optional[str] = None
-    tags: Optional[list[int]] = []
+    tags_ids: Optional[list[int]] = []
     extended_price: Optional[int] = None
     standard_price: Optional[int] = None
     extended_price_old: Optional[int] = None
     standard_price_old: Optional[int] = None
     compatibilities_ids: Optional[list[int]] = []
-    inner_description: Optional[str] = None
+    inner_short_description: Optional[str] = None
+
+    free_sample_link_url: Optional[str] = None
+    free_sample_link_text: Optional[str] = None
+    free_sample_description: Optional[str] = None
+
+    live_preview_type: Optional[str] = 'link'
+    card_title: Optional[str] = None
+    card_button_link: Optional[str] = None
+    card_button_text: Optional[str] = None
+    card_description: Optional[str] = None
+    live_preview_link: Optional[str] = None
+    live_preview_text: Optional[str] = None
+    button_text: Optional[str] = None
+
+    custom_url_title: Optional[str] = None
+    custom_url: Optional[str] = None
+
+    old_img: Optional[Image] = None
+    old_img_retina: Optional[Image] = None
+
+    download_link_text: Optional[str] = None
+    download_link_url: Optional[str] = None
+
+    author_id: Optional[int] = None
+
+    features_short: Optional[list[FeatureShort]] = []

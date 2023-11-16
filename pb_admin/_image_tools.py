@@ -43,3 +43,16 @@ def prepare_image(
     image.mime_type = 'image/jpeg'
     image.file_name = image.file_name or f'{uuid.uuid4()}.jpg'
     return image
+
+
+def make_img_field(img: schemas.Image) -> schemas.Image | None:
+    if not img:
+        return
+    if not img.ident:
+        return (
+            img.file_name,
+            img.data,
+            img.mime_type
+        )
+    else:
+        return str(img.ident)

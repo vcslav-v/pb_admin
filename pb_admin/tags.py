@@ -186,3 +186,13 @@ class Tags():
         else:
             logger.error(resp.text)
             raise Exception(resp.text)
+
+    def bulk_add(self, common_tag_id: int, tag_ids_to_combine: list[int]):
+        headers = {
+            'X-CSRF-TOKEN': self.session.cookies.get('XSRF-TOKEN'),
+        }
+        data = {
+            'common_tag_id': common_tag_id,
+            'tag_ids_to_combine[]': tag_ids_to_combine
+        }
+        response = self.session.post(f'{self.site_url}/api/bi/tag/combine', headers=headers, data=data)
