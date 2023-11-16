@@ -642,7 +642,7 @@ class Products():
 
         return product
 
-    def update(self, product: schemas.Product) -> schemas.Product:
+    def update(self, product: schemas.Product, is_lite: bool = False) -> schemas.Product | None:
         """Update product."""
         if not product.ident:
             raise ValueError('Product id is required')
@@ -723,6 +723,8 @@ class Products():
                 allow_redirects=False,
             )
             resp.raise_for_status()
+            if is_lite:
+                return
             return self.get(product.ident, schemas.ProductType.freebie)
         elif product.product_type == schemas.ProductType.plus:
             fields = {
@@ -789,6 +791,8 @@ class Products():
                 allow_redirects=False,
             )
             resp.raise_for_status()
+            if is_lite:
+                return
             return self.get(product.ident, schemas.ProductType.plus)        
         elif product.product_type == schemas.ProductType.premium:
             fields = {
@@ -849,7 +853,10 @@ class Products():
                 allow_redirects=False,
             )
             resp.raise_for_status()
+            if is_lite:
+                return
             return self.get(product.ident, schemas.ProductType.premium)
+
 
     def _preapre_imgs(self, product: schemas.Product) -> schemas.Product:
         product.thumbnail = image_tools.prepare_image(product.thumbnail) if product.thumbnail and not product.thumbnail.ident else product.thumbnail

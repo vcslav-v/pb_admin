@@ -1,6 +1,6 @@
 from requests import Session
 from urllib.parse import urlparse, parse_qs
-from pb_admin import schemas, _image_tools as image_tools
+from pb_admin import schemas, _image_tools as image_tools, _config as config
 from loguru import logger
 from requests_toolbelt import MultipartEncoder
 import uuid
@@ -80,11 +80,11 @@ class Tags():
             category_ids=tag_categories,
         )
 
-    def create(self, tag: schemas.Tag) -> schemas.Tag:
+    def create(self, tag: schemas.Tag, is_lite: bool = False) -> schemas.Tag | None:
         """Create new tag."""
         boundary = str(uuid.uuid4())
         if tag.image:
-            tag.image = image_tools.prepare_image(tag.image, (1920, 1080), (1920, 1080))
+            tag.image = image_tools.prepare_image(tag.image, config.TAG_IMG_SIZE, config.TAG_IMG_SIZE)
         headers = {
             'Content-Type': f'multipart/form-data; boundary={boundary}',
             'X-CSRF-TOKEN': self.session.cookies.get('XSRF-TOKEN'),
@@ -116,6 +116,8 @@ class Tags():
         )
         resp.raise_for_status()
         if resp.status_code == 201:
+            if is_lite:
+                return
             return self.get(resp.json()['resource']['id'])
         else:
             logger.error(resp.text)
@@ -132,13 +134,13 @@ class Tags():
         resp = self.session.delete(f'{self.site_url}/nova-api/tags', params=params, headers=headers)
         resp.raise_for_status()
 
-    def update(self, updated_tag: schemas.Tag) -> schemas.Tag:
+    def update(self, updated_tag: schemas.Tag, is_lite: bool = False) -> schemas.Tag | None:
         """Update tag."""
         if not updated_tag.ident:
             raise Exception('Tag id is required.')
         boundary = str(uuid.uuid4())
         if updated_tag.image and not updated_tag.image.ident:
-            updated_tag.image = image_tools.prepare_image(updated_tag.image, (1920, 1080), (1920, 1080))
+            updated_tag.image = image_tools.prepare_image(updated_tag.image, config.TAG_IMG_SIZE, config.TAG_IMG_SIZE)
         headers = {
             'Content-Type': f'multipart/form-data; boundary={boundary}',
             'X-CSRF-TOKEN': self.session.cookies.get('XSRF-TOKEN'),
@@ -182,6 +184,8 @@ class Tags():
         )
         resp.raise_for_status()
         if resp.status_code == 200:
+            if is_lite:
+                return
             return self.get(resp.json()['resource']['id'])
         else:
             logger.error(resp.text)
