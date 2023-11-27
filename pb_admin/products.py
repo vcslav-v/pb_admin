@@ -638,7 +638,7 @@ class Products():
                 features=features,
             )
 
-        if not is_lite:
+        if not is_lite and product.category_ids:
             if product.product_type == schemas.ProductType.premium:
                 product.url = f'{self.site_url}/premium/{product.slug}'
             else:
