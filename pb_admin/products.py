@@ -357,7 +357,7 @@ class Products():
                 meta_keywords = values['options'].get('meta_keywords')
                 description = values['options'].get('description')
                 short_description = values['options'].get('short_description')
-                features_short = [schemas.FeatureShort(title=feature['title'], value=feature['value']) for feature in values['options'].get('features')] if values['options'].get('features') else []
+                features_short = [schemas.FeatureShort(title=feature['title'], value=feature['value']) for feature in values['options'].get('features') if feature.get('title') and feature.get('value')] if values['options'].get('features') else []
                 free_sample_link_url = values['options'].get('free_sample_link_url')
                 free_sample_link_text = values['options'].get('free_sample_link_text')
                 free_sample_description = values['options'].get('free_sample_description')
