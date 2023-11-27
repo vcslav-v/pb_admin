@@ -53,6 +53,7 @@ class Feature(FeatureShort):
 class Product(BaseModel):
     ident: Optional[int] = None
     product_type: ProductType
+    url: Optional[str] = None
     title: Optional[str] = None
     created_at: Optional[datetime] = None
     slug: Optional[str] = None

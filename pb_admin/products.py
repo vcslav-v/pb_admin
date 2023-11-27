@@ -208,8 +208,6 @@ class Products():
                 features = [schemas.Feature(
                     title=feature['title'], value=feature['value'], link=feature.get('link')
                 ) for feature in values['options'].get('features')] if values['options'].get('features') else []
-
-
             else:
                 meta_title = None
                 meta_description = None
@@ -639,6 +637,18 @@ class Products():
                 author_id=values.get('author'),
                 features=features,
             )
+
+        if not is_lite:
+            if product.product_type == schemas.ProductType.premium:
+                product.url = f'{self.site_url}/premium/{product.slug}'
+            else:
+                main_category_id = min(product.category_ids)
+                category_resp = self.session.get(
+                    f'{self.site_url}/nova-api/categories/{main_category_id}'
+                )
+                raw_category = category_resp.json()
+                raw_category_name = raw_category['resource']['title'].lower()
+                product.url = f'{self.site_url}/{raw_category_name}/{product.slug}'
 
         return product
 
