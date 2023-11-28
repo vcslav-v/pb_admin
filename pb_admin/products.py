@@ -500,7 +500,13 @@ class Products():
                 live_preview_link = values['options'].get('live_preview_link')
                 live_preview_text = values['options'].get('live_preview_text')
                 button_text = values['options'].get('button_text')
-                features = [schemas.Feature(title=feature['title'], value=feature['value'], link=feature.get('link')) for feature in values['options'].get('features')] if values['options'].get('features') else []
+                features = [
+                    schemas.Feature(
+                        title=feature['title'],
+                        value=feature['value'],
+                        link=feature.get('link')
+                    ) for feature in values['options'].get('features') if feature.get('title') and feature.get('value')
+                ] if values['options'].get('features') else []
             else:
                 meta_title = None
                 meta_description = None
