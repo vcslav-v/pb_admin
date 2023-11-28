@@ -587,7 +587,7 @@ class Products():
                 main_image_retina=schemas.Image(
                     ident=values['single_image_retina'][0]['id'],
                     mime_type=values['single_image_retina'][0]['mime_type'],
-                    original_url=values['single_image_retina'][0]['file_name'],
+                    original_url=values['single_image_retina'][0]['original_url'],
                     file_name=values['single_image_retina'][0]['file_name'],
                 ) if values.get('single_image_retina') else None,
                 gallery_images=[
