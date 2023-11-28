@@ -12,11 +12,14 @@ class Tags():
         self.session = session
         self.site_url = site_url
 
-    def get_list(self) -> list[schemas.Tag]:
+    def get_list(self, search: str = None) -> list[schemas.Tag]:
         """Get list of all tags in short version id, name, title, description, meta_title, meta_description, no_index."""
         tags = []
         is_next_page = True
-        params = {'perPage': 100}
+        params = {
+            'perPage': 100,
+            'search': search or '',
+        }
         while is_next_page:
             resp = self.session.get(f'{self.site_url}/nova-api/tags', params=params)
             resp.raise_for_status()
