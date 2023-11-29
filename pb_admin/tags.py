@@ -203,3 +203,14 @@ class Tags():
             'tag_ids_to_combine[]': tag_ids_to_combine
         }
         response = self.session.post(f'{self.site_url}/api/bi/tag/combine', headers=headers, data=data)
+
+    @staticmethod
+    def get_filled_tag_scheme(name: str, description: str | None = None) -> schemas.Tag:
+        title = name.capitalize()
+        return schemas.Tag(
+            name=name.lower(),
+            title=title,
+            description=description,
+            meta_title=f'Download {title} on Pixelbuddha',
+            meta_description=f'Download {title} for free on Pixelbuddha. Browse through our impressive selection of high quality products.',
+        )
