@@ -205,12 +205,16 @@ class Tags():
         response = self.session.post(f'{self.site_url}/api/bi/tag/combine', headers=headers, data=data)
 
     @staticmethod
-    def get_filled_tag_scheme(name: str, description: str | None = None) -> schemas.Tag:
-        title = name.capitalize()
+    def fill_scheme_by_policy(tag: schemas.Tag) -> schemas.Tag:
+        title = tag.name.capitalize()
         return schemas.Tag(
-            name=name.lower(),
+            ident=tag.ident,
+            name=tag.name.lower(),
             title=title,
-            description=description,
-            meta_title=f'Download {title} on Pixelbuddha',
-            meta_description=f'Download {title} for free on Pixelbuddha. Browse through our impressive selection of high quality products.',
+            description=tag.description,
+            meta_title=f'{title} - Free Download on Pixelbuddha',
+            meta_description=f'Get the best {title} on Pixelbuddha. Wide Selection for Personal and Commercial Use. High-Quality Images. Perfect for Creative Projects. Download Now for Free!',
+            no_index=tag.no_index,
+            category_ids=tag.category_ids,
+            image=tag.image,
         )
