@@ -39,6 +39,7 @@ class Tag(BaseModel):
     image: Optional[Image] = None
     no_index: bool = True
     category_ids: list[int] = []
+    relevanted_tags_ids: list[int] = []
 
 
 class FeatureShort(BaseModel):

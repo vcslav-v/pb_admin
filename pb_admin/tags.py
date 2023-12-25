@@ -70,6 +70,11 @@ class Tags():
         )
         raw_categoies = resp.json()
         tag_categories = list(set(raw_categoies['selected']))
+        resp = self.session.get(
+            f'{self.site_url}/nova-vendor/nova-attach-many/tags/{values["id"]}/attachable/tags'
+        )
+        raw_categoies = resp.json()
+        relevanted_tags_ids = list(set(raw_categoies['selected']))
 
         return schemas.Tag(
             ident=values['id'],
@@ -81,6 +86,7 @@ class Tags():
             image=img,
             no_index=values['no_index'],
             category_ids=tag_categories,
+            relevanted_tags_ids=relevanted_tags_ids,
         )
 
     def create(self, tag: schemas.Tag, is_lite: bool = False) -> schemas.Tag | None:
@@ -103,6 +109,7 @@ class Tags():
             'meta_description': tag.meta_description,
             'no_index': '1' if tag.no_index else '0',
             'categories': str(tag.category_ids),
+            'tags': str(tag.relevanted_tags_ids),
         }
         if tag.image:
             fields['__media__[meta_image][0]'] = (
@@ -169,6 +176,7 @@ class Tags():
             'meta_description': updated_tag.meta_description,
             'no_index': '1' if updated_tag.no_index else '0',
             'categories': str(updated_tag.category_ids),
+            'tags': str(updated_tag.relevanted_tags_ids),
             '_method': 'PUT',
             '_retrieved_at': str(int(datetime.now().timestamp())),
         }
@@ -216,5 +224,6 @@ class Tags():
             meta_description=f'Get the best {title} on Pixelbuddha. Wide Selection for Personal and Commercial Use. High-Quality Images. Perfect for Creative Projects. Download Now for Free!',
             no_index=tag.no_index,
             category_ids=tag.category_ids,
+            relevanted_tags_ids=tag.relevanted_tags_ids,
             image=tag.image,
         )

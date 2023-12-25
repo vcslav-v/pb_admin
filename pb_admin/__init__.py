@@ -1,6 +1,6 @@
 """Main module pb_admin project."""
 
-__version__ = '0.1.28'
+__version__ = '0.1.29'
 __author__ = 'Vaclav_V'
 __all__ = ['PbSession', 'schemas']
 
@@ -25,10 +25,14 @@ class PbSession():
             site_url: str = SITE_URL,
             login: str = PB_LOGIN,
             password: str = PB_PASSWORD,
+            basic_auth_login: str = None,
+            basic_auth_password: str = None,
     ) -> None:
         self.site_url = site_url
         self.login = login
         self.password = password
+        self.basic_auth_login = basic_auth_login
+        self.basic_auth_password = basic_auth_password
 
         self.session = requests.Session()
         self._login()
@@ -38,6 +42,8 @@ class PbSession():
         self.products = Products(self.session, self.site_url)
 
     def _login(self):
+        if self.basic_auth_login and self.basic_auth_password:
+            self.session.auth = (self.basic_auth_login, self.basic_auth_password)
         resp = self.session.get(f'{self.site_url}/admin/login')
         soup = BeautifulSoup(resp.text, 'html.parser')
         token = soup.find('input', {'name': '_token'}).get('value')
