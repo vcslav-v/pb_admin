@@ -16,6 +16,7 @@ class Image(BaseModel):
     original_url: Optional[str] = None
     file_name: Optional[str] = None
     data: Optional[bytes] = None
+    alt: Optional[str] = None
 
 
 class Category(BaseModel):

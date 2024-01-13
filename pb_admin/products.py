@@ -280,30 +280,35 @@ class Products():
                     mime_type=values['material_image'][0]['mime_type'],
                     original_url=values['material_image'][0]['original_url'],
                     file_name=values['material_image'][0]['file_name'],
+                    alt=values['material_image'][0]['custom_properties'].get('alt') if values['material_image'][0]['custom_properties'] else None,
                 ) if values.get('material_image') else None,
                 thumbnail_retina=schemas.Image(
                     ident=values['material_image_retina'][0]['id'],
                     mime_type=values['material_image_retina'][0]['mime_type'],
                     original_url=values['material_image_retina'][0]['original_url'],
                     file_name=values['material_image_retina'][0]['file_name'],
+                    alt=values['material_image_retina'][0]['custom_properties'].get('alt') if values['material_image_retina'][0]['custom_properties'] else None,
                 ) if values.get('material_image_retina') else None,
                 push_image=schemas.Image(
                     ident=values['push_image'][0]['id'],
                     mime_type=values['push_image'][0]['mime_type'],
                     original_url=values['push_image'][0]['original_url'],
                     file_name=values['push_image'][0]['file_name'],
+                    alt=values['push_image'][0]['custom_properties'].get('alt') if values['push_image'][0]['custom_properties'] else None,
                 ) if values.get('push_image') else None,
                 main_image=schemas.Image(
                     ident=values['single_image'][0]['id'],
                     mime_type=values['single_image'][0]['mime_type'],
                     original_url=values['single_image'][0]['original_url'],
                     file_name=values['single_image'][0]['file_name'],
+                    alt=values['single_image'][0]['custom_properties'].get('alt') if values['single_image'][0]['custom_properties'] else None,
                 ) if values.get('single_image') else None,
                 main_image_retina=schemas.Image(
                     ident=values['single_image_retina'][0]['id'],
                     mime_type=values['single_image_retina'][0]['mime_type'],
                     original_url=values['single_image_retina'][0]['original_url'],
                     file_name=values['single_image_retina'][0]['file_name'],
+                    alt=values['single_image_retina'][0]['custom_properties'].get('alt') if values['single_image_retina'][0]['custom_properties'] else None,
                 ) if values.get('single_image_retina') else None,
                 gallery_images=[
                     schemas.Image(
@@ -311,6 +316,7 @@ class Products():
                         mime_type=raw_img['mime_type'],
                         original_url=raw_img['original_url'],
                         file_name=raw_img['file_name'],
+                        alt=raw_img['custom_properties'].get('alt') if raw_img['custom_properties'] else None,
                     ) for raw_img in values['photo_gallery_2']
                 ] if values.get('photo_gallery_2') else [],
                 gallery_images_retina=[
@@ -319,6 +325,7 @@ class Products():
                         mime_type=raw_img['mime_type'],
                         original_url=raw_img['original_url'],
                         file_name=raw_img['file_name'],
+                        alt=raw_img['custom_properties'].get('alt') if raw_img['custom_properties'] else None,
                     ) for raw_img in values['photo_gallery_2_retina']
                 ] if values.get('photo_gallery_2_retina') else [],
                 format_ids=formats_ids,
@@ -340,12 +347,14 @@ class Products():
                     mime_type=values['photo_gallery'][0]['mime_type'],
                     original_url=values['photo_gallery'][0]['original_url'],
                     file_name=values['photo_gallery'][0]['file_name'],
+                    alt=values['photo_gallery'][0]['custom_properties'].get('alt') if values['photo_gallery'][0]['custom_properties'] else None,
                 ) if values.get('photo_gallery') else None,
                 old_img_retina=schemas.Image(
                     ident=values['photo_gallery_retina'][0]['id'],
                     mime_type=values['photo_gallery_retina'][0]['mime_type'],
                     original_url=values['photo_gallery_retina'][0]['original_url'],
                     file_name=values['photo_gallery_retina'][0]['file_name'],
+                    alt=values['photo_gallery_retina'][0]['custom_properties'].get('alt') if values['photo_gallery_retina'][0]['custom_properties'] else None,
                 ) if values.get('photo_gallery_retina') else None,
                 author_id=values.get('author'),
                 features=features,
@@ -423,42 +432,49 @@ class Products():
                     mime_type=values['material_image'][0]['mime_type'],
                     original_url=values['material_image'][0]['original_url'],
                     file_name=values['material_image'][0]['file_name'],
+                    alt=values['material_image'][0]['custom_properties'].get('alt') if values['material_image'][0]['custom_properties'] else None,
                 ) if values.get('material_image') else None,
                 thumbnail_retina=schemas.Image(
                     ident=values['material_image_retina'][0]['id'],
                     mime_type=values['material_image_retina'][0]['mime_type'],
                     original_url=values['material_image_retina'][0]['original_url'],
                     file_name=values['material_image_retina'][0]['file_name'],
+                    alt=values['material_image_retina'][0]['custom_properties'].get('alt') if values['material_image_retina'][0]['custom_properties'] else None,
                 ) if values.get('material_image_retina') else None,
                 premium_thumbnail=schemas.Image(
                     ident=values['material_image_for_catalog'][0]['id'],
                     mime_type=values['material_image_for_catalog'][0]['mime_type'],
                     original_url=values['material_image_for_catalog'][0]['original_url'],
                     file_name=values['material_image_for_catalog'][0]['file_name'],
+                    alt=values['material_image_for_catalog'][0]['custom_properties'].get('alt') if values['material_image_for_catalog'][0]['custom_properties'] else None,
                 ) if values.get('material_image_for_catalog') else None,
                 premium_thumbnail_retina=schemas.Image(
                     ident=values['material_image_retina_for_catalog'][0]['id'],
                     mime_type=values['material_image_retina_for_catalog'][0]['mime_type'],
                     original_url=values['material_image_retina_for_catalog'][0]['original_url'],
                     file_name=values['material_image_retina_for_catalog'][0]['file_name'],
+                    alt=values['material_image_retina_for_catalog'][0]['custom_properties'].get('alt') if values['material_image_retina_for_catalog'][0]['custom_properties'] else None,
                 ) if values.get('material_image_retina_for_catalog') else None,
                 push_image=schemas.Image(
                     ident=values['push_image'][0]['id'],
                     mime_type=values['push_image'][0]['mime_type'],
                     original_url=values['push_image'][0]['original_url'],
                     file_name=values['push_image'][0]['file_name'],
+                    alt=values['push_image'][0]['custom_properties'].get('alt') if values['push_image'][0]['custom_properties'] else None,
                 ) if values.get('push_image') else None,
                 main_image=schemas.Image(
                     ident=values['premium_main'][0]['id'],
                     mime_type=values['premium_main'][0]['mime_type'],
                     original_url=values['premium_main'][0]['original_url'],
                     file_name=values['premium_main'][0]['file_name'],
+                    alt=values['premium_main'][0]['custom_properties'].get('alt') if values['premium_main'][0]['custom_properties'] else None,
                 ) if values.get('premium_main') else None,
                 main_image_retina=schemas.Image(
                     ident=values['premium_main_retina'][0]['id'],
                     mime_type=values['premium_main_retina'][0]['mime_type'],
                     original_url=values['premium_main_retina'][0]['original_url'],
                     file_name=values['premium_main_retina'][0]['file_name'],
+                    alt=values['premium_main_retina'][0]['custom_properties'].get('alt') if values['premium_main_retina'][0]['custom_properties'] else None,
                 ) if values.get('premium_main_retina') else None,
                 gallery_images=[
                     schemas.Image(
@@ -466,6 +482,7 @@ class Products():
                         mime_type=raw_img['mime_type'],
                         original_url=raw_img['original_url'],
                         file_name=raw_img['file_name'],
+                        alt=raw_img['custom_properties'].get('alt') if raw_img['custom_properties'] else None,
                     ) for raw_img in values['premium_slider']
                 ] if values.get('premium_slider') else [],
                 gallery_images_retina=[
@@ -474,6 +491,7 @@ class Products():
                         mime_type=raw_img['mime_type'],
                         original_url=raw_img['original_url'],
                         file_name=raw_img['file_name'],
+                        alt=raw_img['custom_properties'].get('alt') if raw_img['custom_properties'] else None,
                     ) for raw_img in values['premium_slider_retina']
                 ] if values.get('premium_slider_retina') else [],
                 tags_ids=tags_ids,
@@ -571,30 +589,35 @@ class Products():
                     mime_type=values['material_image'][0]['mime_type'],
                     original_url=values['material_image'][0]['original_url'],
                     file_name=values['material_image'][0]['file_name'],
+                    alt=values['material_image'][0]['custom_properties'].get('alt') if values['material_image'][0]['custom_properties'] else None,
                 ) if values.get('material_image') else None,
                 thumbnail_retina=schemas.Image(
                     ident=values['material_image_retina'][0]['id'],
                     mime_type=values['material_image_retina'][0]['mime_type'],
                     original_url=values['material_image_retina'][0]['original_url'],
                     file_name=values['material_image_retina'][0]['file_name'],
+                    alt=values['material_image_retina'][0]['custom_properties'].get('alt') if values['material_image_retina'][0]['custom_properties'] else None,
                 ) if values.get('material_image_retina') else None,
                 push_image=schemas.Image(
                     ident=values['push_image'][0]['id'],
                     mime_type=values['push_image'][0]['mime_type'],
                     original_url=values['push_image'][0]['original_url'],
                     file_name=values['push_image'][0]['file_name'],
+                    alt=values['push_image'][0]['custom_properties'].get('alt') if values['push_image'][0]['custom_properties'] else None,
                 ) if values.get('push_image') else None,
                 main_image=schemas.Image(
                     ident=values['single_image'][0]['id'],
                     mime_type=values['single_image'][0]['mime_type'],
                     original_url=values['single_image'][0]['original_url'],
                     file_name=values['single_image'][0]['file_name'],
+                    alt=values['single_image'][0]['custom_properties'].get('alt') if values['single_image'][0]['custom_properties'] else None,
                 ) if values.get('single_image') else None,
                 main_image_retina=schemas.Image(
                     ident=values['single_image_retina'][0]['id'],
                     mime_type=values['single_image_retina'][0]['mime_type'],
                     original_url=values['single_image_retina'][0]['original_url'],
                     file_name=values['single_image_retina'][0]['file_name'],
+                    alt=values['single_image_retina'][0]['custom_properties'].get('alt') if values['single_image_retina'][0]['custom_properties'] else None,
                 ) if values.get('single_image_retina') else None,
                 gallery_images=[
                     schemas.Image(
@@ -602,6 +625,7 @@ class Products():
                         mime_type=raw_img['mime_type'],
                         original_url=raw_img['original_url'],
                         file_name=raw_img['file_name'],
+                        alt=raw_img['custom_properties'].get('alt') if raw_img['custom_properties'] else None,
                     ) for raw_img in values['photo_gallery_2']
                 ] if values.get('photo_gallery_2') else [],
                 gallery_images_retina=[
@@ -610,6 +634,7 @@ class Products():
                         mime_type=raw_img['mime_type'],
                         original_url=raw_img['original_url'],
                         file_name=raw_img['file_name'],
+                        alt=raw_img['custom_properties'].get('alt') if raw_img['custom_properties'] else None,
                     ) for raw_img in values['photo_gallery_2_retina']
                 ] if values.get('photo_gallery_2_retina') else [],
                 meta_title=meta_title,
@@ -873,6 +898,234 @@ class Products():
                 return
             return self.get(product.ident, schemas.ProductType.premium)
 
+    def create(self, product: schemas.Product, is_lite: bool = False) -> schemas.Product | None:
+        """Create product."""
+        if product.ident:
+            raise ValueError('Product id is not required')
+        boundary = str(uuid.uuid4())
+        product = self._preapre_imgs(product)
+        headers = {
+            'Content-Type': f'multipart/form-data; boundary={boundary}',
+            'X-CSRF-TOKEN': self.session.cookies.get('XSRF-TOKEN'),
+            'X-XSRF-TOKEN': self.session.cookies.get('XSRF-TOKEN'),
+            'X-Requested-With': 'XMLHttpRequest',
+        }
+        params = {'editing': 'true', 'editMode': 'create'}
+        if product.product_type == schemas.ProductType.freebie:
+            fields = {
+                'title': product.title,
+                'created_at': product.created_at.strftime("%Y-%m-%d %H:%M:%S.%f") if product.created_at else datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S.%f"),
+                'slug': product.slug,
+                'status': '1' if product.is_live else '0',
+                'size': product.size,
+                'short_description': product.short_description,
+                'description': product.description,
+                'show_stats': '1' if product.show_statistic else '0',
+                'email_download': '1' if product.email_download else '0',
+                'count_downloads': str(product.count_downloads) if product.count_downloads else None,
+                '__media__[material_image][0]': image_tools.make_img_field(product.thumbnail) if product.thumbnail else None,
+                '__media-custom-properties__[material_image][0][alt]': product.thumbnail.alt if product.thumbnail else None,
+                '__media__[material_image_retina][0]': image_tools.make_img_field(product.thumbnail_retina) if product.thumbnail_retina else None,
+                '__media-custom-properties__[material_image_retina][0][alt]': product.thumbnail_retina.alt if product.thumbnail_retina else None,
+                '__media__[push_image][0]': image_tools.make_img_field(product.push_image) if product.push_image else None,
+                '__media-custom-properties__[push_image][0][alt]': product.push_image.alt if product.push_image else None,
+                'author': None,
+                'author_trashed': None,
+                'options[download_text]': None,
+                'vps_path': product.vps_path,
+                's3_path': product.s3_path,
+                'options[custom_url]': product.custom_url,
+                'options[custom_url_title]': product.custom_url_title,
+                '__media__[single_image][0]': image_tools.make_img_field(product.main_image) if product.main_image else None,
+                '__media-custom-properties__[single_image][0][alt]': product.main_image.alt if product.main_image else None,
+                '__media__[single_image_retina][0]': image_tools.make_img_field(product.main_image_retina) if product.main_image_retina else None,
+                '__media-custom-properties__[single_image_retina][0][alt]': product.main_image_retina.alt if product.main_image_retina else None,
+                'options[author_name]': product.author_name,
+                'options[author_link]': product.author_url,
+                'options[card_title]': product.card_title,
+                'options[card_description]': product.card_description,
+                'options[card_button_text]': product.card_button_text,
+                'options[card_button_link]': product.card_button_link,
+                'options[button_text]': product.button_text,
+                'live_preview_type': product.live_preview_type,
+                'options[live_preview_text]': product.live_preview_text,
+                'options[live_preview_link]': product.live_preview_link,
+                'options[features]': f"[{', '.join([f.model_dump_json() for f in product.features])}]",
+                'categories': str(product.category_ids),
+                'formats': str(product.format_ids),
+                'fonts': None,
+                'options[meta_title]': product.meta_title,
+                'options[meta_description]': product.meta_description,
+                'options[meta_keywords]': product.meta_keywords,
+                'tags': str(product.tags_ids),
+            }
+            fields.update({
+                f'__media__[photo_gallery_2][{i}]': image_tools.make_img_field(img) for i, img in enumerate(product.gallery_images)
+                }
+            )
+            fields.update({
+                f'__media-custom-properties__[photo_gallery_2][{i}][alt]': img.alt for i, img in enumerate(product.gallery_images) if product.gallery_images[i].alt
+                }
+            )
+            fields.update({
+                f'__media__[photo_gallery_2_retina][{i}]': image_tools.make_img_field(img) for i, img in enumerate(product.gallery_images_retina)
+                }
+            )
+            fields.update({
+                f'__media-custom-properties__[photo_gallery_2_retina][{i}][alt]': img.alt for i, img in enumerate(product.gallery_images_retina) if product.gallery_images_retina[i].alt
+                }
+            )
+            form = MultipartEncoder(fields, boundary=boundary)
+            resp = self.session.post(
+                f'{self.site_url}/nova-api/freebies',
+                headers=headers,
+                data=form.to_string(),
+                params=params,
+                allow_redirects=False,
+            )
+            resp.raise_for_status()
+        elif product.product_type == schemas.ProductType.plus:
+            fields = {
+                'title': product.title,
+                'slug': product.slug,
+                'created_at': product.created_at.strftime("%Y-%m-%d %H:%M:%S.%f") if product.created_at else datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S.%f"),
+                'status': '1' if product.is_live else '0',
+                'short_description': product.short_description,
+                'description': product.description,
+                'size': product.size,
+                'show_stats': '1' if product.show_statistic else '0',
+                'count_downloads': str(product.count_downloads) if product.count_downloads else None,
+                '__media__[material_image][0]': image_tools.make_img_field(product.thumbnail) if product.thumbnail else None,
+                '__media-custom-properties__[material_image][0][alt]': product.thumbnail.alt if product.thumbnail else None,
+                '__media__[material_image_retina][0]': image_tools.make_img_field(product.thumbnail_retina) if product.thumbnail_retina else None,
+                '__media-custom-properties__[material_image_retina][0][alt]': product.thumbnail_retina.alt if product.thumbnail_retina else None,
+                '__media__[push_image][0]': image_tools.make_img_field(product.push_image) if product.push_image else None,
+                '__media-custom-properties__[push_image][0][alt]': product.push_image.alt if product.push_image else None,
+                'author': None,
+                'author_trashed': None,
+                'options[download_text]': None,
+                'vps_path': product.vps_path,
+                's3_path': product.s3_path,
+                '__media__[single_image][0]': image_tools.make_img_field(product.main_image) if product.main_image else None,
+                '__media-custom-properties__[single_image][0][alt]': product.main_image.alt if product.main_image else None,
+                '__media__[single_image_retina][0]': image_tools.make_img_field(product.main_image_retina) if product.main_image_retina else None,
+                '__media-custom-properties__[single_image_retina][0][alt]': product.main_image_retina.alt if product.main_image_retina else None,
+                'options[author_name]': product.author_name,
+                'options[author_link]': product.author_url,
+                'options[card_title]': product.card_title,
+                'options[card_description]': product.card_description,
+                'options[card_button_text]': product.card_button_text,
+                'options[card_button_link]': product.card_button_link,
+                'options[button_text]': product.button_text,
+                'live_preview_type': product.live_preview_type,
+                'options[live_preview_text]': product.live_preview_text,
+                'options[live_preview_link]': product.live_preview_link,
+                'options[features]': f"[{', '.join([f.model_dump_json() for f in product.features])}]",
+                'categories': str(product.category_ids),
+                'formats': str(product.format_ids),
+                'fonts': str(product.font_ids),
+                'options[meta_title]': product.meta_title,
+                'options[meta_description]': product.meta_description,
+                'options[meta_keywords]': product.meta_keywords,
+                'tags': str(product.tags_ids),
+            }
+            fields.update({
+                f'__media__[photo_gallery_2][{i}]': image_tools.make_img_field(img) for i, img in enumerate(product.gallery_images)
+                }
+            )
+            fields.update({
+                f'__media-custom-properties__[photo_gallery_2][{i}][alt]': img.alt for i, img in enumerate(product.gallery_images) if product.gallery_images[i].alt
+                }
+            )
+            fields.update({
+                f'__media__[photo_gallery_2_retina][{i}]': image_tools.make_img_field(img) for i, img in enumerate(product.gallery_images_retina)
+                }
+            )
+            fields.update({
+                f'__media-custom-properties__[photo_gallery_2_retina][{i}][alt]': img.alt for i, img in enumerate(product.gallery_images_retina) if product.gallery_images_retina[i].alt
+                }
+            )
+            form = MultipartEncoder(fields, boundary=boundary)
+            resp = self.session.post(
+                f'{self.site_url}/nova-api/pluses',
+                headers=headers,
+                data=form.to_string(),
+                params=params,
+                allow_redirects=False,
+            )
+            resp.raise_for_status()
+        elif product.product_type == schemas.ProductType.premium:
+            fields = {
+                'title': product.title,
+                'slug': product.slug,
+                'created_at': product.created_at.strftime("%Y-%m-%d %H:%M:%S.%f") if product.created_at else datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S.%f"),
+                'status': '1' if product.is_live else '0',
+                'short_description': product.inner_short_description,
+                'price_extended': str(product.extended_price) if product.extended_price else None,
+                'price_standard': str(product.standard_price) if product.standard_price else None,
+                'price_extended_old': str(product.extended_price_old) if product.extended_price_old else None,
+                'price_standard_old': str(product.standard_price_old) if product.standard_price_old else None,
+                '__media__[material_image][0]': image_tools.make_img_field(product.thumbnail) if product.thumbnail else None,
+                '__media-custom-properties__[material_image][0][alt]': product.thumbnail.alt if product.thumbnail else None,
+                '__media__[material_image_retina][0]': image_tools.make_img_field(product.thumbnail_retina) if product.thumbnail_retina else None,
+                '__media-custom-properties__[material_image_retina][0][alt]': product.thumbnail_retina.alt if product.thumbnail_retina else None,
+                '__media__[material_image_for_catalog][0]': image_tools.make_img_field(product.premium_thumbnail) if product.premium_thumbnail else None,
+                '__media-custom-properties__[material_image_for_catalog][0][alt]': product.premium_thumbnail.alt if product.premium_thumbnail else None,
+                '__media__[material_image_retina_for_catalog][0]': image_tools.make_img_field(product.premium_thumbnail_retina) if product.premium_thumbnail_retina else None,
+                '__media-custom-properties__[material_image_retina_for_catalog][0][alt]': product.premium_thumbnail_retina.alt if product.premium_thumbnail_retina else None,
+                '__media__[push_image][0]': image_tools.make_img_field(product.push_image) if product.push_image else None,
+                '__media-custom-properties__[push_image][0][alt]': product.push_image.alt if product.push_image else None,
+                'options[download_text]': None,
+                'vps_path': product.vps_path,
+                's3_path': product.s3_path,
+                '__media__[premium_main][0]': image_tools.make_img_field(product.main_image) if product.main_image else None,
+                '__media-custom-properties__[premium_main][0][alt]': product.main_image.alt if product.main_image else None,
+                '__media__[premium_main_retina][0]': image_tools.make_img_field(product.main_image_retina) if product.main_image_retina else None,
+                '__media-custom-properties__[premium_main_retina][0][alt]': product.main_image_retina.alt if product.main_image_retina else None,
+                'options[short_description]': product.short_description,
+                'options[description]': product.description,
+                'options[free_sample_link_text]': None,
+                'options[free_sample_link_url]': None,
+                'options[free_sample_description]': None,
+                'options[download_link_text]': None,
+                'options[download_link_url]': None,
+                'categories': str(product.category_ids),
+                'compatibilities': str(product.compatibilities_ids),
+                'options[features]': f"[{', '.join([f.model_dump_json() for f in product.features_short])}]",
+                'options[meta_title]': product.meta_title,
+                'options[meta_description]': product.meta_description,
+                'options[meta_keywords]': product.meta_keywords,
+                'tags': str(product.tags_ids),
+            }
+            fields.update({
+                f'__media__[premium_slider][{i}]': image_tools.make_img_field(img) for i, img in enumerate(product.gallery_images)
+                }
+            )
+            fields.update({
+                f'__media-custom-properties__[premium_slider][{i}][alt]': img.alt for i, img in enumerate(product.gallery_images) if product.gallery_images[i].alt
+                }
+            )
+            fields.update({
+                f'__media__[premium_slider_retina][{i}]': image_tools.make_img_field(img) for i, img in enumerate(product.gallery_images_retina)
+                }
+            )
+            fields.update({
+                f'__media-custom-properties__[premium_slider_retina][{i}][alt]': img.alt for i, img in enumerate(product.gallery_images_retina) if product.gallery_images_retina[i].alt
+                }
+            )
+
+            form = MultipartEncoder(fields, boundary=boundary)
+            resp = self.session.post(
+                f'{self.site_url}/nova-api/premia',
+                headers=headers,
+                data=form.to_string(),
+                params=params,
+                allow_redirects=False,
+            )
+            resp.raise_for_status()
+        if is_lite:
+            return
+        return self.get(resp.json()['resource']['id'], product.product_type)
 
     def _preapre_imgs(self, product: schemas.Product) -> schemas.Product:
         product.thumbnail = image_tools.prepare_image(product.thumbnail) if product.thumbnail and not product.thumbnail.ident else product.thumbnail
