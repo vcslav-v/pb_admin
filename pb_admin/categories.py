@@ -8,11 +8,14 @@ class Categories():
         self.session = session
         self.site_url = site_url
 
-    def get_list(self) -> list[schemas.Category]:
+    def get_list(self, search: str = '') -> list[schemas.Category]:
         """Get list of all categories in short version id, title, is_display, headline, weight, is_shown_in_filter."""
         categories = []
         is_next_page = True
-        params = {'perPage': 100}
+        params = {
+            'perPage': 100,
+            'search': search,
+        }
         while is_next_page:
             resp = self.session.get(f'{self.site_url}/nova-api/categories', params=params)
             resp.raise_for_status()
