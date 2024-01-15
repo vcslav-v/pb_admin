@@ -10,6 +10,18 @@ class ProductType(str, Enum):
     plus = 'plus'
 
 
+class Format(BaseModel):
+    ident: int
+    title: str = None
+
+
+class Compatibility(BaseModel):
+    ident: int
+    title: str
+    alias: Optional[str] = None
+    color: Optional[str] = None
+
+
 class Image(BaseModel):
     ident: Optional[int] = None
     mime_type: Optional[str] = None
