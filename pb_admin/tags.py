@@ -66,15 +66,10 @@ class Tags():
         else:
             img = None
         resp = self.session.get(
-            f'{self.site_url}/nova-vendor/nova-attach-many/tags/{values["id"]}/attachable/categories'
-        )
-        raw_categoies = resp.json()
-        tag_categories = list(set(raw_categoies['selected']))
-        resp = self.session.get(
             f'{self.site_url}/nova-vendor/nova-attach-many/tags/{values["id"]}/attachable/tags'
         )
-        raw_categoies = resp.json()
-        relevanted_tags_ids = list(set(raw_categoies['selected']))
+        raw_relevanted_tags = resp.json()
+        relevanted_tags_ids = list(set(raw_relevanted_tags['selected']))
 
         return schemas.Tag(
             ident=values['id'],
@@ -85,7 +80,6 @@ class Tags():
             meta_description=values['meta_description'],
             image=img,
             no_index=values['no_index'],
-            category_ids=tag_categories,
             relevanted_tags_ids=relevanted_tags_ids,
         )
 
@@ -108,7 +102,6 @@ class Tags():
             'meta_title': tag.meta_title,
             'meta_description': tag.meta_description,
             'no_index': '1' if tag.no_index else '0',
-            'categories': str(tag.category_ids),
             'tags': str(tag.relevanted_tags_ids),
         }
         if tag.image:
@@ -175,7 +168,6 @@ class Tags():
             'meta_title': updated_tag.meta_title,
             'meta_description': updated_tag.meta_description,
             'no_index': '1' if updated_tag.no_index else '0',
-            'categories': str(updated_tag.category_ids),
             'tags': str(updated_tag.relevanted_tags_ids),
             '_method': 'PUT',
             '_retrieved_at': str(int(datetime.now().timestamp())),
@@ -223,7 +215,6 @@ class Tags():
             meta_title=f'{title} - Free Download on Pixelbuddha',
             meta_description=f'Get the best {title} on Pixelbuddha. Wide Selection for Personal and Commercial Use. High-Quality Images. Perfect for Creative Projects. Download Now for Free!',
             no_index=tag.no_index,
-            category_ids=tag.category_ids,
             relevanted_tags_ids=tag.relevanted_tags_ids,
             image=tag.image,
         )
