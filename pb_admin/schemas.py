@@ -10,6 +10,17 @@ class ProductType(str, Enum):
     plus = 'plus'
 
 
+class SubscriptionStatus(str, Enum):
+    ACTIVE = 'Active'
+    CANCEL = 'Cancel'
+
+
+class SubscriptionPeriod(str, Enum):
+    LIFETIME = 'Lifetime'
+    YEAR = 'Year'
+    MONTH = 'Month'
+
+
 class Format(BaseModel):
     ident: int
     title: str = None
@@ -20,6 +31,18 @@ class Compatibility(BaseModel):
     title: str
     alias: Optional[str] = None
     color: Optional[str] = None
+
+
+class Subscription(BaseModel):
+    ident: int
+    subscription_id: Optional[str] = None
+    status: SubscriptionStatus
+    period: Optional[SubscriptionPeriod] = None
+    resubscribe: bool
+    user_id: int
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
 
 class Image(BaseModel):
