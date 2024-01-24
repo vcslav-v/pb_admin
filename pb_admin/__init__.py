@@ -1,6 +1,6 @@
 """Main module pb_admin project."""
 
-__version__ = '0.1.35'
+__version__ = '0.1.36'
 __author__ = 'Vaclav_V'
 __all__ = ['PbSession', 'schemas']
 
@@ -16,6 +16,7 @@ from pb_admin.tools import Tools
 from pb_admin.formats import Formats
 from pb_admin.compatibilities import Compatibilities
 from pb_admin.subscriptions import Subscriptions
+from pb_admin.users import Users
 from pb_admin import schemas
 
 SITE_URL = os.environ.get('SITE_URL', '')
@@ -48,6 +49,7 @@ class PbSession():
         self.formats = Formats(self.session, self.site_url)
         self.compatibilities = Compatibilities(self.session, self.site_url)
         self.subscriptions = Subscriptions(self.session, self.site_url)
+        self.users = Users(self.session, self.site_url)
 
     def _login(self):
         if self.basic_auth_login and self.basic_auth_password:

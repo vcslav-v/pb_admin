@@ -153,3 +153,9 @@ class Product(BaseModel):
     author_id: Optional[int] = None
 
     features_short: Optional[list[FeatureShort]] = []
+
+
+class PbUser(BaseModel):
+    ident: int
+    name: str
+    email: str
