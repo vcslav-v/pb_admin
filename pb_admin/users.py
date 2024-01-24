@@ -8,7 +8,7 @@ class Users():
         self.session = session
         self.site_url = site_url
 
-    def get_list(self, search: str = '') -> list[schemas.Subscription]:
+    def get_list(self, search: str = '') -> list[schemas.PbUser]:
         users = []
         is_next_page = True
         params = {
