@@ -159,3 +159,17 @@ class PbUser(BaseModel):
     ident: int
     name: str
     email: str
+
+
+class Order(BaseModel):
+    ident: int
+    is_payed: bool
+    count: int
+    price: float
+    discounted_price: float
+    user_id: Optional[int] = None
+    created_at: datetime
+    product_id: Optional[int] = None
+    user_subscription_id: Optional[int] = None
+    coupon: Optional[str] = None
+    is_extended_license: bool
