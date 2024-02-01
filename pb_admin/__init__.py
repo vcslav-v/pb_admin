@@ -1,6 +1,6 @@
 """Main module pb_admin project."""
 
-__version__ = '0.1.38'
+__version__ = '0.1.39'
 __author__ = 'Vaclav_V'
 __all__ = ['PbSession', 'schemas']
 

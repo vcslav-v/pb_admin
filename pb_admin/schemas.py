@@ -75,6 +75,8 @@ class Tag(BaseModel):
     image: Optional[Image] = None
     no_index: bool = True
     relevanted_tags_ids: list[int] = []
+    sub_tags_ids: list[int] = []
+    is_group: bool = False
 
 
 class FeatureShort(BaseModel):

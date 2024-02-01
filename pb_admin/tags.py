@@ -36,6 +36,7 @@ class Tags():
                         meta_title=values.get('meta_title'),
                         meta_description=values.get('meta_description'),
                         no_index=values.get('no_index'),
+                        is_group=values.get('group_size', False),
                     )
                 )
 
@@ -71,6 +72,12 @@ class Tags():
         raw_relevanted_tags = resp.json()
         relevanted_tags_ids = list(set(raw_relevanted_tags['selected']))
 
+        resp = self.session.get(
+            f'{self.site_url}/nova-vendor/nova-attach-many/tags/{values["id"]}/attachable/subtags'
+        )
+        raw_sub_tags = resp.json()
+        sub_tags_ids = list(set(raw_sub_tags['selected']))
+
         return schemas.Tag(
             ident=values['id'],
             name=values['name'],
@@ -81,6 +88,8 @@ class Tags():
             image=img,
             no_index=values['no_index'],
             relevanted_tags_ids=relevanted_tags_ids,
+            sub_tags_ids=sub_tags_ids,
+            is_group=True if sub_tags_ids else False,
         )
 
     def create(self, tag: schemas.Tag, is_lite: bool = False) -> schemas.Tag | None:
@@ -103,6 +112,7 @@ class Tags():
             'meta_description': tag.meta_description,
             'no_index': '1' if tag.no_index else '0',
             'tags': str(tag.relevanted_tags_ids),
+            'subtags': str(tag.sub_tags_ids),
         }
         if tag.image:
             fields['__media__[meta_image][0]'] = (
@@ -169,6 +179,7 @@ class Tags():
             'meta_description': updated_tag.meta_description,
             'no_index': '1' if updated_tag.no_index else '0',
             'tags': str(updated_tag.relevanted_tags_ids),
+            'subtags': str(updated_tag.sub_tags_ids),
             '_method': 'PUT',
             '_retrieved_at': str(int(datetime.now().timestamp())),
         }
