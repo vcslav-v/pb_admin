@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pb-admin"
-version = "0.1.39"
+version = "0.1.40"
 description = ""
 authors = ["vaclav-v"]
 readme = "README.md"

@@ -8,9 +8,10 @@ from requests_toolbelt import MultipartEncoder
 
 
 class Products():
-    def __init__(self, session: Session, site_url: str) -> None:
+    def __init__(self, session: Session, site_url: str, edit_mode: bool) -> None:
         self.session = session
         self.site_url = site_url
+        self.edit_mode = edit_mode
 
     def get_list(
         self,
@@ -685,6 +686,8 @@ class Products():
 
     def update(self, product: schemas.Product, is_lite: bool = False) -> schemas.Product | None:
         """Update product."""
+        if not self.edit_mode:
+            raise ValueError('Edit mode is required')
         if not product.ident:
             raise ValueError('Product id is required')
         boundary = str(uuid.uuid4())
@@ -900,6 +903,8 @@ class Products():
 
     def create(self, product: schemas.Product, is_lite: bool = False) -> schemas.Product | None:
         """Create product."""
+        if not self.edit_mode:
+            raise ValueError('Edit mode is required')
         if product.ident:
             raise ValueError('Product id is not required')
         boundary = str(uuid.uuid4())

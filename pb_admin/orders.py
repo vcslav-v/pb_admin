@@ -5,9 +5,10 @@ from datetime import datetime
 
 
 class Orders():
-    def __init__(self, session: Session, site_url: str) -> None:
+    def __init__(self, session: Session, site_url: str, edit_mode: bool) -> None:
         self.session = session
         self.site_url = site_url
+        self.edit_mode = edit_mode
 
     def get_list(self, search: str = None) -> list[schemas.Order]:
         orders = []

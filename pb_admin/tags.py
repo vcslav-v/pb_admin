@@ -8,9 +8,10 @@ from datetime import datetime
 
 
 class Tags():
-    def __init__(self, session: Session, site_url: str) -> None:
+    def __init__(self, session: Session, site_url: str, edit_mode: bool) -> None:
         self.session = session
         self.site_url = site_url
+        self.edit_mode = edit_mode
 
     def get_list(self, search: str = None) -> list[schemas.Tag]:
         """Get list of all tags in short version id, name, title, description, meta_title, meta_description, no_index."""
@@ -94,6 +95,8 @@ class Tags():
 
     def create(self, tag: schemas.Tag, is_lite: bool = False) -> schemas.Tag | None:
         """Create new tag."""
+        if not self.edit_mode:
+            raise Exception('Edit mode is required.')
         boundary = str(uuid.uuid4())
         if tag.image:
             tag.image = image_tools.prepare_image(tag.image, config.TAG_IMG_SIZE, config.TAG_IMG_SIZE)
@@ -138,6 +141,8 @@ class Tags():
 
     def delete(self, tag_ident: int) -> None:
         """Delete tag by id."""
+        if not self.edit_mode:
+            raise Exception('Edit mode is required.')
         params = {'resources[]': tag_ident}
         headers = {
             'X-CSRF-TOKEN': self.session.cookies.get('XSRF-TOKEN'),
@@ -149,6 +154,8 @@ class Tags():
 
     def update(self, updated_tag: schemas.Tag, is_lite: bool = False) -> schemas.Tag | None:
         """Update tag."""
+        if not self.edit_mode:
+            raise Exception('Edit mode is required.')
         if not updated_tag.ident:
             raise Exception('Tag id is required.')
         boundary = str(uuid.uuid4())
@@ -205,16 +212,6 @@ class Tags():
             logger.error(resp.text)
             raise Exception(resp.text)
 
-    def bulk_add(self, common_tag_id: int, tag_ids_to_combine: list[int]):
-        headers = {
-            'X-CSRF-TOKEN': self.session.cookies.get('XSRF-TOKEN'),
-        }
-        data = {
-            'common_tag_id': common_tag_id,
-            'tag_ids_to_combine[]': tag_ids_to_combine
-        }
-        response = self.session.post(f'{self.site_url}/api/bi/tag/combine', headers=headers, data=data)
-
     @staticmethod
     def fill_scheme_by_policy(tag: schemas.Tag) -> schemas.Tag:
         title = tag.name.capitalize()
@@ -224,7 +221,7 @@ class Tags():
             title=title,
             description=tag.description,
             meta_title=f'{title} - Free Download on Pixelbuddha',
-            meta_description=f'Get the best {title} on Pixelbuddha. Wide Selection for Personal and Commercial Use. High-Quality Images. Perfect for Creative Projects. Download Now for Free!',
+            meta_description=tag.meta_description,
             no_index=tag.no_index,
             relevanted_tags_ids=tag.relevanted_tags_ids,
             image=tag.image,

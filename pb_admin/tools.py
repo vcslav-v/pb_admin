@@ -5,11 +5,14 @@ from requests_toolbelt import MultipartEncoder
 
 
 class Tools():
-    def __init__(self, session: Session, site_url: str) -> None:
+    def __init__(self, session: Session, site_url: str, edit_mode: bool) -> None:
         self.session = session
         self.site_url = site_url
+        self.edit_mode = edit_mode
 
     def make_push(self, product_ids: list[int], product_type: schemas.ProductType) -> None:
+        if not self.edit_mode:
+            raise ValueError('Edit mode is requared.')
         boundary = str(uuid.uuid4())
         headers = {
             'Content-Type': f'multipart/form-data; boundary={boundary}',

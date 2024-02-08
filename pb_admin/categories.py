@@ -4,9 +4,10 @@ from urllib.parse import urlparse, parse_qs
 
 
 class Categories():
-    def __init__(self, session: Session, site_url: str) -> None:
+    def __init__(self, session: Session, site_url: str, edit_mode: bool) -> None:
         self.session = session
         self.site_url = site_url
+        self.edit_mode = edit_mode
 
     def get_list(self, search: str = '') -> list[schemas.Category]:
         """Get list of all categories in short version id, title, is_display, headline, weight, is_shown_in_filter."""

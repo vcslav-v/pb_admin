@@ -1,6 +1,6 @@
 """Main module pb_admin project."""
 
-__version__ = '0.1.39'
+__version__ = '0.1.40'
 __author__ = 'Vaclav_V'
 __all__ = ['PbSession', 'schemas']
 
@@ -33,6 +33,7 @@ class PbSession():
             password: str = PB_PASSWORD,
             basic_auth_login: str = None,
             basic_auth_password: str = None,
+            edit_mode: bool = False
     ) -> None:
         self.site_url = site_url
         self.login = login
@@ -43,15 +44,15 @@ class PbSession():
         self.session = requests.Session()
         self._login()
 
-        self.tags = Tags(self.session, self.site_url)
-        self.categories = Categories(self.session, self.site_url)
-        self.products = Products(self.session, self.site_url)
-        self.tools = Tools(self.session, self.site_url)
-        self.formats = Formats(self.session, self.site_url)
-        self.compatibilities = Compatibilities(self.session, self.site_url)
-        self.subscriptions = Subscriptions(self.session, self.site_url)
-        self.users = Users(self.session, self.site_url)
-        self.orders = Orders(self.session, self.site_url)
+        self.tags = Tags(self.session, self.site_url, edit_mode)
+        self.categories = Categories(self.session, self.site_url, edit_mode)
+        self.products = Products(self.session, self.site_url, edit_mode)
+        self.tools = Tools(self.session, self.site_url, edit_mode)
+        self.formats = Formats(self.session, self.site_url, edit_mode)
+        self.compatibilities = Compatibilities(self.session, self.site_url, edit_mode)
+        self.subscriptions = Subscriptions(self.session, self.site_url, edit_mode)
+        self.users = Users(self.session, self.site_url, edit_mode)
+        self.orders = Orders(self.session, self.site_url, edit_mode)
 
     def _login(self):
         if self.basic_auth_login and self.basic_auth_password:
