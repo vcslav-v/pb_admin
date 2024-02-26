@@ -13,6 +13,7 @@ class ProductType(str, Enum):
 class SubscriptionStatus(str, Enum):
     ACTIVE = 'Active'
     CANCEL = 'Cancel'
+    EXPIRED = 'Expired'
 
 
 class SubscriptionPeriod(str, Enum):

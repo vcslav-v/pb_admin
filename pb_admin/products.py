@@ -671,15 +671,15 @@ class Products():
             )
 
         if not is_lite and product.category_ids:
+            main_category_id = min(product.category_ids)
+            category_resp = self.session.get(
+                f'{self.site_url}/nova-api/categories/{main_category_id}'
+            )
+            raw_category = category_resp.json()
+            raw_category_name = raw_category['resource']['title'].lower()
             if product.product_type == schemas.ProductType.premium:
-                product.url = f'{self.site_url}/premium/{product.slug}'
+                product.url = f'{self.site_url}/premium/{raw_category_name}/{product.slug}'
             else:
-                main_category_id = min(product.category_ids)
-                category_resp = self.session.get(
-                    f'{self.site_url}/nova-api/categories/{main_category_id}'
-                )
-                raw_category = category_resp.json()
-                raw_category_name = raw_category['resource']['title'].lower()
                 product.url = f'{self.site_url}/{raw_category_name}/{product.slug}'
 
         return product

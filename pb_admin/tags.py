@@ -221,7 +221,7 @@ class Tags():
             title=title,
             description=tag.description,
             meta_title=f'{title} - Free Download on Pixelbuddha',
-            meta_description=tag.meta_description,
+            meta_description=f'Get The Best Free {title} on Pixelbuddha. ⬆️ 1000+ High-Quality Products ⬆️ Editable PSDs ⬆️ Exclusive Deals Today 💸',
             no_index=tag.no_index,
             relevanted_tags_ids=tag.relevanted_tags_ids,
             image=tag.image,
