@@ -12,12 +12,15 @@ from bs4 import BeautifulSoup
 from pb_admin.tags import Tags
 from pb_admin.categories import Categories
 from pb_admin.products import Products
+from pb_admin.new_products import Products as NewProducts
 from pb_admin.tools import Tools
 from pb_admin.formats import Formats
 from pb_admin.compatibilities import Compatibilities
 from pb_admin.subscriptions import Subscriptions
 from pb_admin.users import Users
 from pb_admin.orders import Orders
+from pb_admin.articles import Articles
+from pb_admin.creators import Creators
 from pb_admin import schemas
 
 SITE_URL = os.environ.get('SITE_URL', '')
@@ -53,6 +56,9 @@ class PbSession():
         self.subscriptions = Subscriptions(self.session, self.site_url, edit_mode)
         self.users = Users(self.session, self.site_url, edit_mode)
         self.orders = Orders(self.session, self.site_url, edit_mode)
+        self.articles = Articles(self.session, self.site_url, edit_mode)
+        self.new_products = NewProducts(self.session, self.site_url, edit_mode)
+        self.creators = Creators(self.session, self.site_url, edit_mode)
 
     def _login(self):
         if self.basic_auth_login and self.basic_auth_password:

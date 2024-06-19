@@ -10,12 +10,13 @@ def prepare_image(
     image: schemas.Image,
     min_size: tuple[int, int] = [-1, -1],
     max_size: tuple[int, int] = [-1, -1],
+    session: requests.Session = None
 ) -> schemas.Image:
     """Prepare image for upload to Pixelbuddha."""
     if not image.original_url and not image.data:
         raise ValueError('Either original_url or data must be provided.')
     elif image.original_url and not image.data:
-        raw_img = requests.get(image.original_url)
+        raw_img = session.get(image.original_url)
         raw_img.raise_for_status()
         image.data = raw_img.content
         img_file = io.BytesIO(raw_img.content)

@@ -1058,6 +1058,7 @@ class Products():
                 params=params,
                 allow_redirects=False,
             )
+
             resp.raise_for_status()
         elif product.product_type == schemas.ProductType.premium:
             fields = {
