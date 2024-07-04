@@ -317,6 +317,6 @@ class NewProduct(NewProductLite):
     formats: str | None
     custom_btn_text: str | None = None
     custom_btn_url: str | None = None
-    meta_title: str | None
-    meta_description: str | None
-    meta_keywords: str | None
+    meta_title: str | None = None
+    meta_description: str | None = None
+    meta_keywords: str | None = None
