@@ -58,6 +58,7 @@ class Image(BaseModel):
 class Category(BaseModel):
     ident: int
     title: str
+    slug: Optional[str] = None
     is_display: bool
     headline: Optional[str] = None
     weight: Optional[int] = None

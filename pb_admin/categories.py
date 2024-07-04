@@ -9,7 +9,7 @@ class Categories():
         self.site_url = site_url
         self.edit_mode = edit_mode
 
-    def get_list(self, search: str = '') -> list[schemas.Category]:
+    def get_list(self, search: str = '', is_lite: bool = True) -> list[schemas.Category]:
         """Get list of all categories in short version id, title, is_display, headline, weight, is_shown_in_filter."""
         categories = []
         is_next_page = True
@@ -51,5 +51,20 @@ class Categories():
                 params.update(parse_qs(parsed_url.query))
             else:
                 is_next_page = False
+        if is_lite:
+            return categories
 
+        for category in categories:
+            params = {
+                'editing': True,
+                'editMode': 'update',
+                'viaResource': '',
+                'viaResourceId': '',
+                'viaRelationship': '',
+            }
+            resp = self.session.get(f'{self.site_url}/nova-api/categories/{category.ident}/update-fields', params=params)
+            resp.raise_for_status()
+            raw_data = resp.json()
+            values = {cell['attribute']: cell['value'] for cell in raw_data['fields'][0]['fields']}
+            category.slug = values.get('slug')
         return categories
