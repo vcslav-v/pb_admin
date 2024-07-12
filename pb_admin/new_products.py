@@ -130,7 +130,7 @@ class Products():
                     if placeholder.get('layout') == 'image':
                         values['presentation'][-1].append(
                             schemas.ProductLayoutImg(
-                                ident=placeholder['key'],
+                                ident=str(placeholder['key']),
                                 img_id=placeholder_values['image_id'],
                             )
                         )
