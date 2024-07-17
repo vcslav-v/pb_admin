@@ -28,7 +28,7 @@ class Orders():
                     if cell['attribute'] == 'user':
                         values['user_id'] = cell['belongsToId']
                     elif cell['attribute'] == 'Orderable':
-                        if cell['resourceName'] == 'premia':
+                        if cell['resourceName'] == 'products':
                             values['product_id'] = cell['morphToId']
                         elif cell['resourceName'] == 'subscriptions':
                             values['user_subscription_id'] = cell['morphToId']
