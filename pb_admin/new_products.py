@@ -46,21 +46,21 @@ class Products():
                     elif cell.get('attribute') == 'category':
                         values['category_id'] = cell['belongsToId']
                     elif cell.get('attribute') == 'type':
-                        values['product_type'] = schemas.NewProductType(cell['value'])
+                        values['product_type'] = schemas.NewProductType(
+                            [o['value'] for o in cell['options'] if o['label'] == cell['value']][0]
+                        )
                     else:
                         values[cell['attribute']] = cell['value']
                 products.append(
                     schemas.NewProductLite(
                         ident=values.get('id'),
-                        slug=values.get('slug'),
                         title=values.get('title'),
                         product_type=values.get('product_type'),
                         created_at=values.get('created_at'),
                         is_live=values.get('status'),
-                        size=values.get('size'),
-                        only_registered_download=values.get('only_registered_download'),
                         creator_id=values.get('creator_id'),
                         category_id=values.get('category_id'),
+                        is_special=values.get('special'),
                     )
                 )
             if raw_page.get('next_page_url'):
@@ -160,6 +160,7 @@ class Products():
             title=values.get('title'),
             slug=values.get('slug'),
             created_at=values.get('created_at'),
+            is_special=values.get('special'),
             is_live=values.get('status'),
             product_type=values.get('product_type'),
             only_registered_download=values.get('only_registered_download'),
@@ -212,6 +213,7 @@ class Products():
             'only_registered_download': '1' if product.only_registered_download else '0',
             'creator': str(product.creator_id),
             'creator_trashed': 'false',
+            'special': '1' if product.is_special else '0',
             'excerpt': product.excerpt,
             'description': product.description,
             'size': product.size,

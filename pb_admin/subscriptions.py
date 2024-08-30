@@ -44,7 +44,7 @@ class Subscriptions():
                         )
                     )
                 except Exception as e:
-                    pass
+                    print(f'Error in subscription {values.get("id")}: {e}')
             if raw_page.get('next_page_url'):
                 parsed_url = urlparse(raw_page.get('next_page_url'))
                 params.update(parse_qs(parsed_url.query))

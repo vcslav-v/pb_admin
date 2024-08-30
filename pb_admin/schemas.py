@@ -287,14 +287,12 @@ class Creator(CreatorLite):
 class NewProductLite(BaseModel):
     ident: int
     title: str
-    slug: str
     created_at: datetime
     is_live: bool
     product_type: NewProductType
-    only_registered_download: bool = False
     creator_id: int | None
-    size: str
     category_id: int
+    is_special: bool
 
 
 class NewProduct(NewProductLite):
@@ -302,6 +300,7 @@ class NewProduct(NewProductLite):
     slug: str | None
     excerpt: str
     description: str
+    size: str
     price_commercial_cent: int | None
     price_extended_cent: int | None
     price_commercial_sale_cent: int | None
@@ -309,6 +308,7 @@ class NewProduct(NewProductLite):
     thumbnail: Image | None
     push_image: Image | None
     images: list[Image] = []
+    only_registered_download: bool = False
     presentation: list[list[ProductLayoutImg | ProductLayoutVideo]] = []
     vps_path: str | None
     s3_path: str | None
