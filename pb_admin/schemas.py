@@ -19,6 +19,7 @@ class SubscriptionStatus(str, Enum):
 class SubscriptionPeriod(str, Enum):
     LIFETIME = 'Lifetime'
     YEAR = 'Year'
+    QUARTER = 'Quarter'
     MONTH = 'Month'
 
 
