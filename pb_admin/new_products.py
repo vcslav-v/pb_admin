@@ -286,6 +286,7 @@ class Products():
             'only_registered_download': '1' if product.only_registered_download else '0',
             'creator': str(product.creator_id),
             'creator_trashed': 'false',
+            'special': '1' if product.is_special else '0',
             'excerpt': product.excerpt,
             'description': product.description,
             'size': product.size,
