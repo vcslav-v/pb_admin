@@ -1,4 +1,4 @@
-from requests import Session
+from aiohttp import ClientSession
 from urllib.parse import urlparse, parse_qs
 from pb_admin import schemas
 import uuid
@@ -6,66 +6,66 @@ from requests_toolbelt import MultipartEncoder
 
 
 class Creators():
-    def __init__(self, session: Session, site_url: str, edit_mode: bool) -> None:
+    def __init__(self, session: ClientSession, site_url: str, edit_mode: bool) -> None:
         self.session = session
         self.site_url = site_url
         self.edit_mode = edit_mode
 
-    def get_list(self, search: str = '') -> list[schemas.CreatorLite]:
+    async def get_list(self, search: str = '') -> list[schemas.CreatorLite]:
         creators = []
         is_next_page = True
         params = {
-            'perPage': 100,
+            'perPage': '100',
             'search': search,
         }
         while is_next_page:
-            resp = self.session.get(f'{self.site_url}/nova-api/creators', params=params)
-            resp.raise_for_status()
-            raw_page = resp.json()
-            for row in raw_page['resources']:
-                values = {cell['attribute']: cell['value'] for cell in row['fields']}
-                creators.append(
-                    schemas.CreatorLite(
-                        ident=values.get('id'),
-                        name=values.get('name'),
-                        link=values.get('link'),
+            async with self.session.get(f'{self.site_url}/nova-api/creators', params=params) as resp:
+                resp.raise_for_status()
+                raw_page = await resp.json()
+                for row in raw_page['resources']:
+                    values = {cell['attribute']: cell['value'] for cell in row['fields']}
+                    creators.append(
+                        schemas.CreatorLite(
+                            ident=values.get('id'),
+                            name=values.get('name'),
+                            link=values.get('link'),
+                        )
                     )
-                )
-            if raw_page.get('next_page_url'):
-                parsed_url = urlparse(raw_page.get('next_page_url'))
-                params.update(parse_qs(parsed_url.query))
-            else:
-                is_next_page = False
+                if raw_page.get('next_page_url'):
+                    parsed_url = urlparse(raw_page.get('next_page_url'))
+                    params.update(parse_qs(parsed_url.query))
+                else:
+                    is_next_page = False
         return creators
 
-    def get(self, ident: int) -> schemas.Creator:
-        resp = self.session.get(f'{self.site_url}/nova-api/creators/{ident}')
-        resp.raise_for_status()
-        raw_data = resp.json()
-        values = {cell['attribute']: cell['value'] for cell in raw_data['resource']['fields']}
-        creator = schemas.Creator(
-            ident=values.get('id'),
-            name=values.get('name'),
-            link=values.get('link'),
-            description=values.get('description'),
-            avatar=schemas.Image(
-                ident=values['avatar'][0]['id'],
-                mime_type=values['avatar'][0]['mime_type'],
-                original_url=values['avatar'][0]['original_url'],
-                file_name=values['avatar'][0]['file_name'],
-                alt=values['avatar'][0]['custom_properties'].get('alt'),
-            ) if values.get('avatar') else None,
-        )
+    async def get(self, ident: int) -> schemas.Creator:
+        async with self.session.get(f'{self.site_url}/nova-api/creators/{ident}') as resp:
+            resp.raise_for_status()
+            raw_data = await resp.json()
+            values = {cell['attribute']: cell['value'] for cell in raw_data['resource']['fields']}
+            creator = schemas.Creator(
+                ident=values.get('id'),
+                name=values.get('name'),
+                link=values.get('link'),
+                description=values.get('description'),
+                avatar=schemas.Image(
+                    ident=values['avatar'][0]['id'],
+                    mime_type=values['avatar'][0]['mime_type'],
+                    original_url=values['avatar'][0]['original_url'],
+                    file_name=values['avatar'][0]['file_name'],
+                    alt=values['avatar'][0]['custom_properties'].get('alt'),
+                ) if values.get('avatar') else None,
+            )
         return creator
 
-    def create(self, creator: schemas.Creator) -> schemas.Creator:
+    async def create(self, creator: schemas.Creator) -> schemas.Creator:
         if not self.edit_mode:
             raise Exception('Edit mode is required.')
         boundary = str(uuid.uuid4())
         headers = {
             'Content-Type': f'multipart/form-data; boundary={boundary}',
-            'X-CSRF-TOKEN': self.session.cookies.get('XSRF-TOKEN'),
-            'X-XSRF-TOKEN': self.session.cookies.get('XSRF-TOKEN'),
+            'X-CSRF-TOKEN': self.session.cookie_jar.filter_cookies(self.site_url).get('XSRF-TOKEN').value,
+            'X-XSRF-TOKEN': self.session.cookie_jar.filter_cookies(self.site_url).get('XSRF-TOKEN').value,
             'X-Requested-With': 'XMLHttpRequest',
         }
 
@@ -73,8 +73,8 @@ class Creators():
             'name': creator.name,
             'description': creator.description,
             'link': creator.link,
-            'viaResource': None,
-            'viaResourceId': None,
+            'viaResource': '',
+            'viaResourceId': '',
         }
         if creator.avatar:
             fields['__media__[avatar][0]'] = (
@@ -83,11 +83,12 @@ class Creators():
                 creator.avatar.mime_type
             )
         form = MultipartEncoder(fields, boundary=boundary)
-        resp = self.session.post(
+        async with self.session.post(
             f'{self.site_url}/nova-api/creators?editing=true&editMode=create',
             data=form.to_string(),
             headers=headers,
             allow_redirects=False
-        )
-        resp.raise_for_status()
-        return self.get(resp.json()['resource']['id'])
+        ) as resp:
+            resp.raise_for_status()
+            raw_creator = await resp.json()
+        return await self.get(raw_creator['resource']['id'])

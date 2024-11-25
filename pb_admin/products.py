@@ -1,1148 +1,456 @@
-from requests import Session
+from aiohttp import ClientSession, ClientResponse
 from pb_admin import schemas, _image_tools as image_tools
 from urllib.parse import urlparse, parse_qs
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from loguru import logger
 from requests_toolbelt import MultipartEncoder
+import re
+import json
+
+
+def get_id_form_options(value: str, options: list[dict]) -> int:
+    for option in options:
+        if option['value'] == int(value):
+            return option['value']
+    return None
 
 
 class Products():
-    def __init__(self, session: Session, site_url: str, edit_mode: bool) -> None:
+    def __init__(self, session: ClientSession, site_url: str, edit_mode: bool) -> None:
         self.session = session
         self.site_url = site_url
         self.edit_mode = edit_mode
 
-    def get_list(
+    async def get_list(
         self,
-        search: str = None,
-        category_id: int = None,
-    ) -> list[schemas.Product]:
-        all_products = []
-        all_products.extend(self.get_freebie_list(search, category_id))
-        all_products.extend(self.get_premium_list(search, category_id))
-        all_products.extend(self.get_plus_list(search, category_id))
-        return all_products
-
-    def get_freebie_list(
-        self,
-        search: str = None,
-        category_id: int = None,
+        search: str = '',
         per_page: int = 100,
-    ) -> list[schemas.Product]:
+    ) -> list[schemas.NewProductLite]:
         products = []
         is_next_page = True
         params = {
-            'perPage': per_page,
+            'perPage': str(per_page),
             'search': search,
         }
-        if category_id:
-            params.update(
-                {
-                    'viaResource': 'categories',
-                    'viaResourceId': category_id,
-                    'viaRelationship': 'freebies',
-                    'relationshipType': 'morphToMany'
-                }
-            )
         while is_next_page:
-            resp = self.session.get(f'{self.site_url}/nova-api/freebies', params=params)
-            resp.raise_for_status()
-            raw_page = resp.json()
+            async with self.session.get(f'{self.site_url}/nova-api/products', params=params) as resp:
+                resp.raise_for_status()
+                raw_page = await resp.json()
 
-            for row in raw_page['resources']:
-                values = {cell['attribute']: cell['value'] for cell in row['fields']}
-                products.append(
-                    schemas.Product(
-                        ident=values.get('id'),
-                        product_type=schemas.ProductType.freebie,
-                        title=values.get('title'),
-                        created_at=values.get('created_at'),
-                        slug=values.get('slug'),
-                        is_live=True if values.get('status') == 'Live' else False,
-                        size=values.get('size'),
-                        show_statistic=values.get('show_statistic'),
-                        email_download=values.get('email_download'),
-                        count_downloads=values.get('count_downloads'),
-                        author=values.get('author'),
+                for row in raw_page['resources']:
+                    values = {}
+                    for cell in row['fields']:
+                        if cell.get('attribute') == 'creator':
+                            values['creator_id'] = cell['belongsToId']
+                        elif cell.get('attribute') == 'category':
+                            values['category_id'] = cell['belongsToId']
+                        elif cell.get('attribute') == 'type':
+                            values['product_type'] = schemas.NewProductType(
+                                [o['value'] for o in cell['options'] if o['label'] == cell['value']][0]
+                            )
+                        else:
+                            values[cell['attribute']] = cell['value']
+                    products.append(
+                        schemas.NewProductLite(
+                            ident=values.get('id'),
+                            title=values.get('title'),
+                            product_type=values.get('product_type'),
+                            created_at=values.get('created_at'),
+                            is_live=values.get('status'),
+                            creator_id=values.get('creator_id'),
+                            category_id=values.get('category_id'),
+                            is_special=values.get('special'),
+                        )
                     )
-                )
-            if raw_page.get('next_page_url'):
-                parsed_url = urlparse(raw_page.get('next_page_url'))
-                params.update(parse_qs(parsed_url.query))
-            else:
-                is_next_page = False
+                if raw_page.get('next_page_url'):
+                    parsed_url = urlparse(raw_page.get('next_page_url'))
+                    params.update(parse_qs(parsed_url.query))
+                else:
+                    is_next_page = False
         return products
 
-    def get_premium_list(
-        self,
-        search: str = None,
-        category_id: int = None,
-        per_page: int = 100,
-    ) -> list[schemas.Product]:
-        products = []
-        is_next_page = True
-        params = {
-            'perPage': per_page,
-            'search': search
-        }
-        if category_id:
-            params.update(
-                {
-                    'viaResource': 'categories',
-                    'viaResourceId': category_id,
-                    'viaRelationship': 'premiums',
-                    'relationshipType': 'morphToMany'
-                }
-            )
-        while is_next_page:
-            resp = self.session.get(f'{self.site_url}/nova-api/premia', params=params)
-            resp.raise_for_status()
-            raw_page = resp.json()
-
-            for row in raw_page['resources']:
-                values = {cell['attribute']: cell['value'] for cell in row['fields']}
-                products.append(
-                    schemas.Product(
-                        ident=values.get('id'),
-                        product_type=schemas.ProductType.premium,
-                        title=values.get('title'),
-                        created_at=values.get('created_at'),
-                        slug=values.get('slug'),
-                        is_live=True if values.get('status') == 'Live' else False,
-                        extended_price=values.get('price_extended'),
-                        standard_price=values.get('price_standard'),
-                        extended_price_old=values.get('price_extended_old'),
-                        standard_price_old=values.get('price_standard_old'),
-                    )
-                )
-            if raw_page.get('next_page_url'):
-                parsed_url = urlparse(raw_page.get('next_page_url'))
-                params.update(parse_qs(parsed_url.query))
-            else:
-                is_next_page = False
-        return products
-
-    def get_plus_list(
-        self,
-        search: str = None,
-        category_id: int = None,
-        per_page: int = 100,
-    ) -> list[schemas.Product]:
-        products = []
-        is_next_page = True
-        params = {
-            'perPage': per_page,
-            'search': search
-        }
-        if category_id:
-            params.update(
-                {
-                    'viaResource': 'categories',
-                    'viaResourceId': category_id,
-                    'viaRelationship': 'pluses',
-                    'relationshipType': 'morphToMany'
-                }
-            )
-        while is_next_page:
-            resp = self.session.get(f'{self.site_url}/nova-api/pluses', params=params)
-            resp.raise_for_status()
-            raw_page = resp.json()
-
-            for row in raw_page['resources']:
-                values = {cell['attribute']: cell['value'] for cell in row['fields']}
-                products.append(
-                    schemas.Product(
-                        ident=values.get('id'),
-                        product_type=schemas.ProductType.plus,
-                        title=values.get('title'),
-                        created_at=values.get('created_at'),
-                        slug=values.get('slug'),
-                        is_live=True if values.get('status') == 'Live' else False,
-                        size=values.get('size'),
-                        show_statistic=values.get('show_statistic'),
-                        count_downloads=values.get('count_downloads'),
-                        author=values.get('author'),
-                    )
-                )
-            if raw_page.get('next_page_url'):
-                parsed_url = urlparse(raw_page.get('next_page_url'))
-                params.update(parse_qs(parsed_url.query))
-            else:
-                is_next_page = False
-        return products
-
-    def get(self, product_ident: int, product_type: schemas.ProductType, is_lite: bool = False) -> schemas.Product:
-        #TODO: check work for old products
+    async def get(self, product_ident: int) -> schemas.NewProduct:
         """Get product by id."""
-        if product_type == schemas.ProductType.freebie:
-            resp = self.session.get(f'{self.site_url}/nova-api/freebies/{product_ident}')
-        elif product_type == schemas.ProductType.premium:
-            resp = self.session.get(f'{self.site_url}/nova-api/premia/{product_ident}')
-        elif product_type == schemas.ProductType.plus:
-            resp = self.session.get(f'{self.site_url}/nova-api/pluses/{product_ident}')
-        else:
-            raise ValueError(f'Unknown product type: {product_type}')
-        resp.raise_for_status()
-        raw_product = resp.json()
-        raw_product_fields = raw_product['resource']['fields']
-        values = {
-            raw_product_field['attribute']: raw_product_field['value'] for raw_product_field in raw_product_fields if raw_product_field.get('attribute')
+        params = {
+            'editing': 'true',
+            'editMode': 'update',
+            'viaResource': '',
+            'viaResourceId': '',
+            'viaRelationship': '',
         }
+        async with self.session.get(
+            f'{self.site_url}/nova-api/products/{product_ident}/update-fields',
+            params=params
+        ) as resp:
+            resp.raise_for_status()
+            raw_product = await resp.json()
+            raw_product_fields = raw_product['fields'][0]['fields']
+            values = {}
+            for cell in raw_product_fields:
+                if cell.get('attribute') == 'creator':
+                    values['creator_id'] = cell['belongsToId']
+                elif cell.get('attribute') == 'category':
+                    values['category_id'] = cell['belongsToId']
+                elif cell.get('attribute') == 'type':
+                    values['product_type'] = schemas.NewProductType(cell['value'])
+                elif cell.get('attribute') in ['thumbnail', 'push_image']:
+                    if not cell['value']:
+                        values[cell['attribute']] = None
+                        continue
+                    values[cell['attribute']] = schemas.Image(
+                        ident=cell['value'][0]['id'],
+                        mime_type=cell['value'][0]['mime_type'],
+                        original_url=cell['value'][0]['original_url'],
+                        file_name=cell['value'][0]['file_name'],
+                        alt=cell['value'][0]['custom_properties'].get('alt') if cell['value'][0]['custom_properties'] else None,
+                    )
+                elif cell.get('attribute') == 'images':
+                    values['images'] = [schemas.Image(
+                        ident=c['id'],
+                        mime_type=c['mime_type'],
+                        original_url=c['original_url'],
+                        file_name=c['file_name'],
+                        alt=c['custom_properties'].get('alt') if c['custom_properties'] else None,
+                    ) for c in cell['value']]
+                elif cell.get('attribute') == 'presentation':
+                    values['presentation'] = []
+                    for i, placeholder in enumerate(cell['value']):
+                        placeholder_values = {}
+                        for placeholder_value in placeholder['attributes']:
+                            if placeholder_value.get('attribute') == 'image':
+                                placeholder_values['image_id'] = get_id_form_options(
+                                    placeholder_value['value'],
+                                    placeholder_value['options']
+                                )
+                            else:
+                                placeholder_values[placeholder_value['attribute']] = placeholder_value['value']
+                        if i == 0 or placeholder_values['new_row'] is True:
+                            values['presentation'].append([])
+                        if placeholder.get('layout') == 'image':
+                            values['presentation'][-1].append(
+                                schemas.ProductLayoutImg(
+                                    ident=str(placeholder['key']),
+                                    img_id=placeholder_values['image_id'],
+                                )
+                            )
+                        elif placeholder.get('layout') == 'video':
+                            values['presentation'][-1].append(
+                                schemas.ProductLayoutVideo(
+                                    ident=placeholder['key'],
+                                    title=placeholder_values['title'],
+                                    link=placeholder_values['link'],
+                                )
+                            )
 
-        if product_type == schemas.ProductType.freebie:
-            if values.get('options'):
-                meta_title = values['options'].get('meta_title')
-                meta_description = values['options'].get('meta_description')
-                meta_keywords = values['options'].get('meta_keywords')
-                author_name = values['options'].get('author_name')
-                author_url = values['options'].get('author_link')
-                card_title = values['options'].get('card_title')
-                card_button_link = values['options'].get('card_button_link')
-                card_button_text = values['options'].get('card_button_text')
-                card_description = values['options'].get('card_description')
-                live_preview_link = values['options'].get('live_preview_link')
-                live_preview_text = values['options'].get('live_preview_text')
-                button_text = values['options'].get('button_text')
-                custom_url_title = values['options'].get('custom_url_title')
-                custom_url = values['options'].get('custom_url')
-                features = [schemas.Feature(
-                    title=feature['title'], value=feature['value'], link=feature.get('link')
-                ) for feature in values['options'].get('features')] if values['options'].get('features') else []
-            else:
-                meta_title = None
-                meta_description = None
-                meta_keywords = None
-                author_name = None
-                author_url = None
-                card_title = None
-                card_button_link = None
-                card_button_text = None
-                card_description = None
-                live_preview_link = None
-                live_preview_text = None
-                button_text = None
-                custom_url_title = None
-                custom_url = None
-                features = []
+                elif cell.get('attribute') in ['s3_path', 'vps_path']:
+                    if cell.get('component') != 'file-field':
+                        continue
+                    values[cell['attribute']] = cell['value']
+                elif cell.get('attribute') == 'options':
+                    for opt_field in cell['fields']:
+                        values[opt_field['attribute']] = opt_field['value']
+                else:
+                    values[cell['attribute']] = cell['value']
 
-            if not is_lite:
-                categories_resp = self.session.get(
-                    f'{self.site_url}/nova-vendor/nova-attach-many/freebies/{values["id"]}/attachable/categories'
-                )
-                raw_categoies = categories_resp.json()
-                categories_ids = list(set(raw_categoies['selected']))
-
-                formats_resp = self.session.get(
-                    f'{self.site_url}/nova-vendor/nova-attach-many/freebies/{values["id"]}/attachable/formats'
-                )
-                raw_formats = formats_resp.json()
-                formats_ids = list(set(raw_formats['selected']))
-
-                fonts_resp = self.session.get(
-                    f'{self.site_url}/nova-vendor/nova-attach-many/freebies/{values["id"]}/attachable/fonts'
-                )
-                raw_fonts = fonts_resp.json()
-                fonts_ids = list(set(raw_fonts['selected']))
-
-                tags_resp = self.session.get(
-                    f'{self.site_url}/nova-vendor/nova-attach-many/freebies/{values["id"]}/attachable/tags'
-                )
-                raw_tags = tags_resp.json()
-                tags_ids = list(set(raw_tags['selected']))
-            else:
-                categories_ids = []
-                formats_ids = []
-                fonts_ids = []
-                tags_ids = []
-
-            product = schemas.Product(
-                ident=values['id'],
-                product_type=schemas.ProductType.freebie,
-                title=values['title'],
-                created_at=values['created_at'],
-                slug=values['slug'],
-                is_live=True if values.get('status') == 'Live' else False,
+            values['tag_ids'] = await self._get_tag_ids(product_ident)
+            values['font_ids'] = await self._get_fonts(product_ident)
+            product = schemas.NewProduct(
+                ident=str(product_ident),
+                title=values.get('title'),
+                slug=values.get('slug'),
+                created_at=values.get('created_at'),
+                is_special=values.get('special'),
+                is_live=values.get('status'),
+                product_type=values.get('product_type'),
+                only_registered_download=values.get('only_registered_download'),
+                creator_id=values.get('creator_id'),
                 size=values.get('size'),
-                show_statistic=values.get('show_stats'),
-                email_download=values.get('email_download'),
-                count_downloads=values.get('count_downloads'),
-                short_description=values.get('short_description'),
+                category_id=values.get('category_id'),
+                excerpt=values.get('excerpt'),
                 description=values.get('description'),
+                price_commercial_cent=self._price_to_cents(values.get('price_commercial')),
+                price_extended_cent=self._price_to_cents(values.get('price_extended')),
+                price_commercial_sale_cent=self._price_to_cents(values.get('price_commercial_sale')),
+                price_extended_sale_cent=self._price_to_cents(values.get('price_extended_sale')),
+                thumbnail=values.get('thumbnail'),
+                push_image=values.get('push_image'),
+                images=values.get('images'),
+                presentation=values.get('presentation'),
                 vps_path=values.get('vps_path'),
                 s3_path=values.get('s3_path'),
-                meta_title=meta_title,
-                meta_description=meta_description,
-                meta_keywords=meta_keywords,
-                author_name=author_name,
-                author_url=author_url,
-                thumbnail=schemas.Image(
-                    ident=values['material_image'][0]['id'],
-                    mime_type=values['material_image'][0]['mime_type'],
-                    original_url=values['material_image'][0]['original_url'],
-                    file_name=values['material_image'][0]['file_name'],
-                    alt=values['material_image'][0]['custom_properties'].get('alt') if values['material_image'][0]['custom_properties'] else None,
-                ) if values.get('material_image') else None,
-                thumbnail_retina=schemas.Image(
-                    ident=values['material_image_retina'][0]['id'],
-                    mime_type=values['material_image_retina'][0]['mime_type'],
-                    original_url=values['material_image_retina'][0]['original_url'],
-                    file_name=values['material_image_retina'][0]['file_name'],
-                    alt=values['material_image_retina'][0]['custom_properties'].get('alt') if values['material_image_retina'][0]['custom_properties'] else None,
-                ) if values.get('material_image_retina') else None,
-                push_image=schemas.Image(
-                    ident=values['push_image'][0]['id'],
-                    mime_type=values['push_image'][0]['mime_type'],
-                    original_url=values['push_image'][0]['original_url'],
-                    file_name=values['push_image'][0]['file_name'],
-                    alt=values['push_image'][0]['custom_properties'].get('alt') if values['push_image'][0]['custom_properties'] else None,
-                ) if values.get('push_image') else None,
-                main_image=schemas.Image(
-                    ident=values['single_image'][0]['id'],
-                    mime_type=values['single_image'][0]['mime_type'],
-                    original_url=values['single_image'][0]['original_url'],
-                    file_name=values['single_image'][0]['file_name'],
-                    alt=values['single_image'][0]['custom_properties'].get('alt') if values['single_image'][0]['custom_properties'] else None,
-                ) if values.get('single_image') else None,
-                main_image_retina=schemas.Image(
-                    ident=values['single_image_retina'][0]['id'],
-                    mime_type=values['single_image_retina'][0]['mime_type'],
-                    original_url=values['single_image_retina'][0]['original_url'],
-                    file_name=values['single_image_retina'][0]['file_name'],
-                    alt=values['single_image_retina'][0]['custom_properties'].get('alt') if values['single_image_retina'][0]['custom_properties'] else None,
-                ) if values.get('single_image_retina') else None,
-                gallery_images=[
-                    schemas.Image(
-                        ident=raw_img['id'],
-                        mime_type=raw_img['mime_type'],
-                        original_url=raw_img['original_url'],
-                        file_name=raw_img['file_name'],
-                        alt=raw_img['custom_properties'].get('alt') if raw_img['custom_properties'] else None,
-                    ) for raw_img in values['photo_gallery_2']
-                ] if values.get('photo_gallery_2') else [],
-                gallery_images_retina=[
-                    schemas.Image(
-                        ident=raw_img['id'],
-                        mime_type=raw_img['mime_type'],
-                        original_url=raw_img['original_url'],
-                        file_name=raw_img['file_name'],
-                        alt=raw_img['custom_properties'].get('alt') if raw_img['custom_properties'] else None,
-                    ) for raw_img in values['photo_gallery_2_retina']
-                ] if values.get('photo_gallery_2_retina') else [],
-                format_ids=formats_ids,
-                font_ids=fonts_ids,
-                tags_ids=tags_ids,
-                category_ids=categories_ids,
-                live_preview_type=values.get('live_preview_type'),
-                card_title=card_title,
-                card_button_link=card_button_link,
-                card_button_text=card_button_text,
-                card_description=card_description,
-                live_preview_link=live_preview_link,
-                live_preview_text=live_preview_text,
-                button_text=button_text,
-                custom_url_title=custom_url_title,
-                custom_url=custom_url,
-                old_img=schemas.Image(
-                    ident=values['photo_gallery'][0]['id'],
-                    mime_type=values['photo_gallery'][0]['mime_type'],
-                    original_url=values['photo_gallery'][0]['original_url'],
-                    file_name=values['photo_gallery'][0]['file_name'],
-                    alt=values['photo_gallery'][0]['custom_properties'].get('alt') if values['photo_gallery'][0]['custom_properties'] else None,
-                ) if values.get('photo_gallery') else None,
-                old_img_retina=schemas.Image(
-                    ident=values['photo_gallery_retina'][0]['id'],
-                    mime_type=values['photo_gallery_retina'][0]['mime_type'],
-                    original_url=values['photo_gallery_retina'][0]['original_url'],
-                    file_name=values['photo_gallery_retina'][0]['file_name'],
-                    alt=values['photo_gallery_retina'][0]['custom_properties'].get('alt') if values['photo_gallery_retina'][0]['custom_properties'] else None,
-                ) if values.get('photo_gallery_retina') else None,
-                author_id=values.get('author'),
-                features=features,
+                formats=values.get('formats'),
+                tags_ids=values.get('tag_ids'),
+                font_ids=values.get('font_ids'),
+                custom_btn_text=values.get('custom_btn_text'),
+                custom_btn_url=values.get('custom_btn_url'),
+                meta_title=values.get('meta_title'),
+                meta_description=values.get('meta_description'),
+                meta_keywords=values.get('meta_keywords'),
             )
-        elif product_type == schemas.ProductType.premium:
-            if values.get('options'):
-                meta_title = values['options'].get('meta_title')
-                meta_description = values['options'].get('meta_description')
-                meta_keywords = values['options'].get('meta_keywords')
-                description = values['options'].get('description')
-                short_description = values['options'].get('short_description')
-                features_short = [schemas.FeatureShort(title=feature['title'], value=feature['value']) for feature in values['options'].get('features') if feature.get('title') and feature.get('value')] if values['options'].get('features') else []
-                free_sample_link_url = values['options'].get('free_sample_link_url')
-                free_sample_link_text = values['options'].get('free_sample_link_text')
-                free_sample_description = values['options'].get('free_sample_description')
-                download_link_text = values['options'].get('download_link_text')
-                download_link_url = values['options'].get('download_link_url')
-            else:
-                meta_title = None
-                meta_description = None
-                meta_keywords = None
-                description = None
-                short_description = None
-                features_short = []
-                free_sample_link_url = None
-                free_sample_link_text = None
-                free_sample_description = None
-                download_link_text = None
-                download_link_url = None
-
-            if not is_lite:
-                categories_resp = self.session.get(
-                    f'{self.site_url}/nova-vendor/nova-attach-many/premia/{values["id"]}/attachable/categories'
-                )
-                raw_categoies = categories_resp.json()
-                categories_ids = list(set(raw_categoies['selected']))
-
-                tags_resp = self.session.get(
-                    f'{self.site_url}/nova-vendor/nova-attach-many/premia/{values["id"]}/attachable/tags'
-                )
-                raw_tags = tags_resp.json()
-                tags_ids = list(set(raw_tags['selected']))
-
-                compatibilities_resp = self.session.get(
-                    f'{self.site_url}/nova-vendor/nova-attach-many/premia/{values["id"]}/attachable/compatibilities'
-                )
-                raw_compatibilities = compatibilities_resp.json()
-                compatibilities_ids = list(set(raw_compatibilities['selected']))
-            else:
-                categories_ids = []
-                tags_ids = []
-                compatibilities_ids = []
-
-            product = schemas.Product(
-                ident=values['id'],
-                product_type=schemas.ProductType.premium,
-                title=values['title'],
-                created_at=values['created_at'],
-                slug=values['slug'],
-                is_live=True if values.get('status') == 'Live' else False,
-                extended_price=values.get('price_extended'),
-                standard_price=values.get('price_standard'),
-                extended_price_old=values.get('price_extended_old'),
-                standard_price_old=values.get('price_standard_old'),
-                inner_short_description=short_description,
-                description=description,
-                short_description=values.get('short_description'),
-                vps_path=values.get('vps_path'),
-                s3_path=values.get('s3_path'),
-                meta_title=meta_title,
-                meta_description=meta_description,
-                meta_keywords=meta_keywords,
-                thumbnail=schemas.Image(
-                    ident=values['material_image'][0]['id'],
-                    mime_type=values['material_image'][0]['mime_type'],
-                    original_url=values['material_image'][0]['original_url'],
-                    file_name=values['material_image'][0]['file_name'],
-                    alt=values['material_image'][0]['custom_properties'].get('alt') if values['material_image'][0]['custom_properties'] else None,
-                ) if values.get('material_image') else None,
-                thumbnail_retina=schemas.Image(
-                    ident=values['material_image_retina'][0]['id'],
-                    mime_type=values['material_image_retina'][0]['mime_type'],
-                    original_url=values['material_image_retina'][0]['original_url'],
-                    file_name=values['material_image_retina'][0]['file_name'],
-                    alt=values['material_image_retina'][0]['custom_properties'].get('alt') if values['material_image_retina'][0]['custom_properties'] else None,
-                ) if values.get('material_image_retina') else None,
-                premium_thumbnail=schemas.Image(
-                    ident=values['material_image_for_catalog'][0]['id'],
-                    mime_type=values['material_image_for_catalog'][0]['mime_type'],
-                    original_url=values['material_image_for_catalog'][0]['original_url'],
-                    file_name=values['material_image_for_catalog'][0]['file_name'],
-                    alt=values['material_image_for_catalog'][0]['custom_properties'].get('alt') if values['material_image_for_catalog'][0]['custom_properties'] else None,
-                ) if values.get('material_image_for_catalog') else None,
-                premium_thumbnail_retina=schemas.Image(
-                    ident=values['material_image_retina_for_catalog'][0]['id'],
-                    mime_type=values['material_image_retina_for_catalog'][0]['mime_type'],
-                    original_url=values['material_image_retina_for_catalog'][0]['original_url'],
-                    file_name=values['material_image_retina_for_catalog'][0]['file_name'],
-                    alt=values['material_image_retina_for_catalog'][0]['custom_properties'].get('alt') if values['material_image_retina_for_catalog'][0]['custom_properties'] else None,
-                ) if values.get('material_image_retina_for_catalog') else None,
-                push_image=schemas.Image(
-                    ident=values['push_image'][0]['id'],
-                    mime_type=values['push_image'][0]['mime_type'],
-                    original_url=values['push_image'][0]['original_url'],
-                    file_name=values['push_image'][0]['file_name'],
-                    alt=values['push_image'][0]['custom_properties'].get('alt') if values['push_image'][0]['custom_properties'] else None,
-                ) if values.get('push_image') else None,
-                main_image=schemas.Image(
-                    ident=values['premium_main'][0]['id'],
-                    mime_type=values['premium_main'][0]['mime_type'],
-                    original_url=values['premium_main'][0]['original_url'],
-                    file_name=values['premium_main'][0]['file_name'],
-                    alt=values['premium_main'][0]['custom_properties'].get('alt') if values['premium_main'][0]['custom_properties'] else None,
-                ) if values.get('premium_main') else None,
-                main_image_retina=schemas.Image(
-                    ident=values['premium_main_retina'][0]['id'],
-                    mime_type=values['premium_main_retina'][0]['mime_type'],
-                    original_url=values['premium_main_retina'][0]['original_url'],
-                    file_name=values['premium_main_retina'][0]['file_name'],
-                    alt=values['premium_main_retina'][0]['custom_properties'].get('alt') if values['premium_main_retina'][0]['custom_properties'] else None,
-                ) if values.get('premium_main_retina') else None,
-                gallery_images=[
-                    schemas.Image(
-                        ident=raw_img['id'],
-                        mime_type=raw_img['mime_type'],
-                        original_url=raw_img['original_url'],
-                        file_name=raw_img['file_name'],
-                        alt=raw_img['custom_properties'].get('alt') if raw_img['custom_properties'] else None,
-                    ) for raw_img in values['premium_slider']
-                ] if values.get('premium_slider') else [],
-                gallery_images_retina=[
-                    schemas.Image(
-                        ident=raw_img['id'],
-                        mime_type=raw_img['mime_type'],
-                        original_url=raw_img['original_url'],
-                        file_name=raw_img['file_name'],
-                        alt=raw_img['custom_properties'].get('alt') if raw_img['custom_properties'] else None,
-                    ) for raw_img in values['premium_slider_retina']
-                ] if values.get('premium_slider_retina') else [],
-                tags_ids=tags_ids,
-                category_ids=categories_ids,
-                compatibilities_ids=compatibilities_ids,
-                features_short=features_short,
-                free_sample_link_url=free_sample_link_url,
-                free_sample_link_text=free_sample_link_text,
-                free_sample_description=free_sample_description,
-                download_link_text=download_link_text,
-                download_link_url=download_link_url,
-            )
-        elif product_type == schemas.ProductType.plus:
-            if values.get('options'):
-                meta_title = values['options'].get('meta_title')
-                meta_description = values['options'].get('meta_description')
-                meta_keywords = values['options'].get('meta_keywords')
-                author_name = values['options'].get('author_name')
-                author_url = values['options'].get('author_link')
-                card_title = values['options'].get('card_title')
-                card_button_link = values['options'].get('card_button_link')
-                card_button_text = values['options'].get('card_button_text')
-                card_description = values['options'].get('card_description')
-                live_preview_link = values['options'].get('live_preview_link')
-                live_preview_text = values['options'].get('live_preview_text')
-                button_text = values['options'].get('button_text')
-                features = [
-                    schemas.Feature(
-                        title=feature['title'],
-                        value=feature['value'],
-                        link=feature.get('link')
-                    ) for feature in values['options'].get('features') if feature.get('title') and feature.get('value')
-                ] if values['options'].get('features') else []
-            else:
-                meta_title = None
-                meta_description = None
-                meta_keywords = None
-                author_name = None
-                author_url = None
-                card_title = None
-                card_button_link = None
-                card_button_text = None
-                card_description = None
-                live_preview_link = None
-                live_preview_text = None
-                button_text = None
-                features = []
-
-            if not is_lite:
-                categories_resp = self.session.get(
-                    f'{self.site_url}/nova-vendor/nova-attach-many/pluses/{values["id"]}/attachable/categories'
-                )
-                raw_categoies = categories_resp.json()
-                categories_ids = list(set(raw_categoies['selected']))
-
-                formats_resp = self.session.get(
-                    f'{self.site_url}/nova-vendor/nova-attach-many/pluses/{values["id"]}/attachable/formats'
-                )
-                raw_formats = formats_resp.json()
-                formats_ids = list(set(raw_formats['selected']))
-
-                fonts_resp = self.session.get(
-                    f'{self.site_url}/nova-vendor/nova-attach-many/pluses/{values["id"]}/attachable/fonts'
-                )
-                raw_fonts = fonts_resp.json()
-                fonts_ids = list(set(raw_fonts['selected']))
-
-                tags_resp = self.session.get(
-                    f'{self.site_url}/nova-vendor/nova-attach-many/pluses/{values["id"]}/attachable/tags'
-                )
-                raw_tags = tags_resp.json()
-                tags_ids = list(set(raw_tags['selected']))
-            else:
-                categories_ids = []
-                formats_ids = []
-                fonts_ids = []
-                tags_ids = []
-
-            product = schemas.Product(
-                ident=values['id'],
-                product_type=schemas.ProductType.plus,
-                title=values['title'],
-                created_at=values['created_at'],
-                slug=values['slug'],
-                is_live=True if values.get('status') == 'Live' else False,
-                size=values.get('size'),
-                show_statistic=values.get('show_stats'),
-                count_downloads=values.get('count_downloads'),
-                short_description=values.get('short_description'),
-                description=values.get('description'),
-                vps_path=values.get('vps_path'),
-                s3_path=values.get('s3_path'),
-                thumbnail=schemas.Image(
-                    ident=values['material_image'][0]['id'],
-                    mime_type=values['material_image'][0]['mime_type'],
-                    original_url=values['material_image'][0]['original_url'],
-                    file_name=values['material_image'][0]['file_name'],
-                    alt=values['material_image'][0]['custom_properties'].get('alt') if values['material_image'][0]['custom_properties'] else None,
-                ) if values.get('material_image') else None,
-                thumbnail_retina=schemas.Image(
-                    ident=values['material_image_retina'][0]['id'],
-                    mime_type=values['material_image_retina'][0]['mime_type'],
-                    original_url=values['material_image_retina'][0]['original_url'],
-                    file_name=values['material_image_retina'][0]['file_name'],
-                    alt=values['material_image_retina'][0]['custom_properties'].get('alt') if values['material_image_retina'][0]['custom_properties'] else None,
-                ) if values.get('material_image_retina') else None,
-                push_image=schemas.Image(
-                    ident=values['push_image'][0]['id'],
-                    mime_type=values['push_image'][0]['mime_type'],
-                    original_url=values['push_image'][0]['original_url'],
-                    file_name=values['push_image'][0]['file_name'],
-                    alt=values['push_image'][0]['custom_properties'].get('alt') if values['push_image'][0]['custom_properties'] else None,
-                ) if values.get('push_image') else None,
-                main_image=schemas.Image(
-                    ident=values['single_image'][0]['id'],
-                    mime_type=values['single_image'][0]['mime_type'],
-                    original_url=values['single_image'][0]['original_url'],
-                    file_name=values['single_image'][0]['file_name'],
-                    alt=values['single_image'][0]['custom_properties'].get('alt') if values['single_image'][0]['custom_properties'] else None,
-                ) if values.get('single_image') else None,
-                main_image_retina=schemas.Image(
-                    ident=values['single_image_retina'][0]['id'],
-                    mime_type=values['single_image_retina'][0]['mime_type'],
-                    original_url=values['single_image_retina'][0]['original_url'],
-                    file_name=values['single_image_retina'][0]['file_name'],
-                    alt=values['single_image_retina'][0]['custom_properties'].get('alt') if values['single_image_retina'][0]['custom_properties'] else None,
-                ) if values.get('single_image_retina') else None,
-                gallery_images=[
-                    schemas.Image(
-                        ident=raw_img['id'],
-                        mime_type=raw_img['mime_type'],
-                        original_url=raw_img['original_url'],
-                        file_name=raw_img['file_name'],
-                        alt=raw_img['custom_properties'].get('alt') if raw_img['custom_properties'] else None,
-                    ) for raw_img in values['photo_gallery_2']
-                ] if values.get('photo_gallery_2') else [],
-                gallery_images_retina=[
-                    schemas.Image(
-                        ident=raw_img['id'],
-                        mime_type=raw_img['mime_type'],
-                        original_url=raw_img['original_url'],
-                        file_name=raw_img['file_name'],
-                        alt=raw_img['custom_properties'].get('alt') if raw_img['custom_properties'] else None,
-                    ) for raw_img in values['photo_gallery_2_retina']
-                ] if values.get('photo_gallery_2_retina') else [],
-                meta_title=meta_title,
-                meta_description=meta_description,
-                meta_keywords=meta_keywords,
-                author_name=author_name,
-                author_url=author_url,
-                format_ids=formats_ids,
-                font_ids=fonts_ids,
-                tags_ids=tags_ids,
-                category_ids=categories_ids,
-                card_title=card_title,
-                card_button_link=card_button_link,
-                card_button_text=card_button_text,
-                card_description=card_description,
-                live_preview_link=live_preview_link,
-                live_preview_text=live_preview_text,
-                button_text=button_text,
-                old_img=schemas.Image(
-                    ident=values['photo_gallery'][0]['id'],
-                    mime_type=values['photo_gallery'][0]['mime_type'],
-                    original_url=values['photo_gallery'][0]['original_url'],
-                    file_name=values['photo_gallery'][0]['file_name'],
-                ) if values.get('photo_gallery') else None,
-                old_img_retina=schemas.Image(
-                    ident=values['photo_gallery_retina'][0]['id'],
-                    mime_type=values['photo_gallery_retina'][0]['mime_type'],
-                    original_url=values['photo_gallery_retina'][0]['original_url'],
-                    file_name=values['photo_gallery_retina'][0]['file_name'],
-                ) if values.get('photo_gallery_retina') else None,
-                author_id=values.get('author'),
-                features=features,
-            )
-
-        if not is_lite and product.category_ids:
-            main_category_id = min(product.category_ids)
-            category_resp = self.session.get(
-                f'{self.site_url}/nova-api/categories/{main_category_id}'
-            )
-            raw_category = category_resp.json()
-            raw_category_name = raw_category['resource']['title'].lower()
-            if product.product_type == schemas.ProductType.premium:
-                product.url = f'{self.site_url}/premium/{raw_category_name}/{product.slug}'
-            else:
-                product.url = f'{self.site_url}/{raw_category_name}/{product.slug}'
-
         return product
 
-    def update(self, product: schemas.Product, is_lite: bool = False) -> schemas.Product | None:
+    async def update(self, product: schemas.NewProduct, is_lite: bool = False) -> schemas.NewProduct | None:
         """Update product."""
         if not self.edit_mode:
             raise ValueError('Edit mode is required')
         if not product.ident:
             raise ValueError('Product id is required')
         boundary = str(uuid.uuid4())
-        product = self._preapre_imgs(product)
         headers = {
             'Content-Type': f'multipart/form-data; boundary={boundary}',
-            'X-CSRF-TOKEN': self.session.cookies.get('XSRF-TOKEN'),
-            'X-XSRF-TOKEN': self.session.cookies.get('XSRF-TOKEN'),
+            'X-CSRF-TOKEN': self.session.cookie_jar.filter_cookies(self.site_url).get('XSRF-TOKEN').value,
+            'X-XSRF-TOKEN': self.session.cookie_jar.filter_cookies(self.site_url).get('XSRF-TOKEN').value,
             'X-Requested-With': 'XMLHttpRequest',
         }
         params = {'editing': 'true', 'editMode': 'update'}
-        if product.product_type == schemas.ProductType.freebie:
-            fields = {
-                'title': product.title,
-                'created_at': product.created_at.strftime("%Y-%m-%d %H:%M:%S.%f") if product.created_at else None,
-                'slug': product.slug,
-                'status': '1' if product.is_live else '0',
-                'size': product.size,
-                'short_description': product.short_description,
-                'description': product.description,
-                'show_stats': '1' if product.show_statistic else '0',
-                'email_download': '1' if product.email_download else '0',
-                'count_downloads': str(product.count_downloads) if product.count_downloads else None,
-                'vps_path': product.vps_path,
-                's3_path': product.s3_path,
-                'options[custom_url]': product.custom_url,
-                'options[custom_url_title]': product.custom_url_title,
-                'options[author_name]': product.author_name,
-                'options[author_link]': product.author_url,
-                'options[card_title]': product.card_title,
-                'options[card_button_link]': product.card_button_link,
-                'options[card_button_text]': product.card_button_text,
-                'options[card_description]': product.card_description,
-                'options[button_text]': product.button_text,
-                'live_preview_type': product.live_preview_type,
-                'options[live_preview_text]': product.live_preview_text,
-                'options[live_preview_link]': product.live_preview_link,
-                'options[features]': f"[{', '.join([f.model_dump_json() for f in product.features])}]",
-                'categories': str(product.category_ids),
-                'formats': str(product.format_ids),
-                'fonts': str(product.font_ids),
-                'options[meta_title]': product.meta_title,
-                'options[meta_description]': product.meta_description,
-                'options[meta_keywords]': product.meta_keywords,
-                'tags': str(product.tags_ids),
-                'author': str(product.author_id) if product.author_id else None,
-                'author_trashed': 'false',
-                'options[download_text]': None,
-                '_method': 'PUT',
-                '_retrieved_at': str(int(datetime.now().timestamp())),
-            }
-            for i, img in enumerate(product.gallery_images):
-                fields[f'__media__[photo_gallery_2][{i}]'] = image_tools.make_img_field(img)
-            for i, img in enumerate(product.gallery_images_retina):
-                fields[f'__media__[photo_gallery_2_retina][{i}]'] = image_tools.make_img_field(img)
-            if product.old_img:
-                fields['__media__[photo_gallery][0]'] = image_tools.make_img_field(product.old_img)
-            if product.old_img_retina:
-                fields['__media__[photo_gallery_retina][0]'] = image_tools.make_img_field(product.old_img_retina)
-            if product.main_image:
-                fields['__media__[single_image][0]'] = image_tools.make_img_field(product.main_image)
-            if product.main_image_retina:
-                fields['__media__[single_image_retina][0]'] = image_tools.make_img_field(product.main_image_retina)
-            if product.thumbnail:
-                fields['__media__[material_image][0]'] = image_tools.make_img_field(product.thumbnail)
-            if product.thumbnail_retina:
-                fields['__media__[material_image_retina][0]'] = image_tools.make_img_field(product.thumbnail_retina)
-            if product.push_image:
-                fields['__media__[push_image][0]'] = image_tools.make_img_field(product.push_image)
-
-            form = MultipartEncoder(fields, boundary=boundary)
-            resp = self.session.post(
-                f'{self.site_url}/nova-api/freebies/{product.ident}',
-                headers=headers,
-                data=form.to_string(),
-                params=params,
-                allow_redirects=False,
-            )
+        fields = {
+            'title': product.title,
+            'created_at': product.created_at.strftime("%Y-%m-%d %H:%M:%S.%f") if product.created_at else datetime.now(tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S.%f"),
+            'slug': self._get_slug(product.title, product.slug),
+            'status': '1' if product.is_live else '0',
+            'type': str(product.product_type.value),
+            'only_registered_download': '1' if product.only_registered_download else '0',
+            'creator': str(product.creator_id),
+            'creator_trashed': 'false',
+            'special': '1' if product.is_special else '0',
+            'excerpt': product.excerpt,
+            'description': product.description,
+            'size': product.size,
+            'price_commercial': self._cents_to_price(product.price_commercial_cent),
+            'price_extended': self._cents_to_price(product.price_extended_cent),
+            'price_commercial_sale': self._cents_to_price(product.price_commercial_sale_cent),
+            'price_extended_sale': self._cents_to_price(product.price_extended_sale_cent),
+            '___nova_flexible_content_fields': '["presentation"]',
+            'presentation': self._get_presentation(product.presentation, product.images),
+            'vps_path': product.vps_path,
+            's3_path': product.s3_path,
+            'category': str(product.category_id),
+            'category_trashed': 'false',
+            'tags': str(product.tags_ids),
+            'options[formats]': product.formats,
+            'options[custom_btn_text]': product.custom_btn_text,
+            'options[custom_btn_url]': product.custom_btn_url,
+            'fonts': str(product.font_ids) if product.font_ids else '[]',
+            'options[meta_title]': product.meta_title,
+            'options[meta_description]': product.meta_description,
+            'options[meta_keywords]': product.meta_keywords,
+            '_method': 'PUT',
+            '_retrieved_at': str(int(datetime.now(tz=timezone.utc).timestamp()))
+        }
+        if product.thumbnail:
+            thumbnail = image_tools.make_img_field(product.thumbnail)
+            if thumbnail:
+                fields['__media__[thumbnail][0]'] = thumbnail
+                if product.thumbnail.alt:
+                    fields['__media-custom-properties__[thumbnail][0][alt]'] = product.thumbnail.alt
+        if product.push_image:
+            push_image = image_tools.make_img_field(product.push_image)
+            if push_image:
+                fields['__media__[push_image][0]'] = push_image
+                if product.push_image.alt:
+                    fields['__media-custom-properties__[push_image][0][alt]'] = product.push_image.alt
+        for i, img in enumerate(product.images):
+            fields[f'__media__[images][{i}]'] = image_tools.make_img_field(img)
+            if img.alt:
+                fields[f'__media-custom-properties__[images][{i}][alt]'] = img.alt
+        form = MultipartEncoder(fields, boundary=boundary)
+        async with self.session.post(
+            f'{self.site_url}/nova-api/products/{product.ident}',
+            headers=headers,
+            data=form.to_string(),
+            params=params,
+            allow_redirects=False,
+        ) as resp:
             resp.raise_for_status()
             if is_lite:
                 return
-            return self.get(product.ident, schemas.ProductType.freebie)
-        elif product.product_type == schemas.ProductType.plus:
-            fields = {
-                'title': product.title,
-                'created_at': product.created_at.strftime("%Y-%m-%d %H:%M:%S.%f") if product.created_at else None,
-                'slug': product.slug,
-                'status': '1' if product.is_live else '0',
-                'short_description': product.short_description,
-                'description': product.description,
-                'size': product.size,
-                'show_stats': '1' if product.show_statistic else '0',
-                'count_downloads': str(product.count_downloads) if product.count_downloads else None,
-                'author': str(product.author_id) if product.author_id else None,
-                'author_trashed': 'false',
-                'options[download_text]': None,
-                'vps_path': product.vps_path,
-                's3_path': product.s3_path,
-                'options[author_name]': product.author_name,
-                'options[author_link]': product.author_url,
-                'options[card_title]': product.card_title,
-                'options[card_description]': product.card_description,
-                'options[card_button_text]': product.card_button_text,
-                'options[card_button_link]': product.card_button_link,
-                'options[button_text]': product.button_text,
-                'live_preview_type': product.live_preview_type,
-                'options[live_preview_text]': product.live_preview_text,
-                'options[live_preview_link]': product.live_preview_link,
-                'options[features]': f"[{', '.join([f.model_dump_json() for f in product.features])}]",
-                'categories': str(product.category_ids),
-                'formats': str(product.format_ids),
-                'fonts': str(product.font_ids),
-                'options[meta_title]': product.meta_title,
-                'options[meta_description]': product.meta_description,
-                'options[meta_keywords]': product.meta_keywords,
-                'tags': str(product.tags_ids),
-                '_method': 'PUT',
-                '_retrieved_at': str(int(datetime.now().timestamp())),
-            }
-            if product.main_image:
-                fields['__media__[single_image][0]'] = image_tools.make_img_field(product.main_image)
-            if product.main_image_retina:
-                fields['__media__[single_image_retina][0]'] = image_tools.make_img_field(product.main_image_retina)
-            for i, img in enumerate(product.gallery_images):
-                fields[f'__media__[photo_gallery_2][{i}]'] = image_tools.make_img_field(img)
-            for i, img in enumerate(product.gallery_images_retina):
-                fields[f'__media__[photo_gallery_2_retina][{i}]'] = image_tools.make_img_field(img)
-            if product.old_img:
-                fields['__media__[photo_gallery][0]'] = image_tools.make_img_field(product.old_img)
-            if product.old_img_retina:
-                fields['__media__[photo_gallery_retina][0]'] = image_tools.make_img_field(product.old_img_retina)
-            if product.thumbnail:
-                fields['__media__[material_image][0]'] = image_tools.make_img_field(product.thumbnail)
-            if product.thumbnail_retina:
-                fields['__media__[material_image_retina][0]'] = image_tools.make_img_field(product.thumbnail_retina)
-            if product.push_image:
-                fields['__media__[push_image][0]'] = image_tools.make_img_field(product.push_image)
+        return await self.get(product.ident)
 
-            form = MultipartEncoder(fields, boundary=boundary)
-            resp = self.session.post(
-                f'{self.site_url}/nova-api/pluses/{product.ident}',
-                headers=headers,
-                data=form.to_string(),
-                params=params,
-                allow_redirects=False,
-            )
-            resp.raise_for_status()
-            if is_lite:
-                return
-            return self.get(product.ident, schemas.ProductType.plus)        
-        elif product.product_type == schemas.ProductType.premium:
-            fields = {
-                'title': product.title,
-                'created_at': product.created_at.strftime("%Y-%m-%d %H:%M:%S.%f") if product.created_at else None,
-                'slug': product.slug,
-                'status': '1' if product.is_live else '0',
-                'short_description': product.short_description,
-                'price_extended': str(product.extended_price) if product.extended_price else None,
-                'price_standard': str(product.standard_price) if product.standard_price else None,
-                'price_extended_old': str(product.extended_price_old) if product.extended_price_old else None,
-                'price_standard_old': str(product.standard_price_old) if product.standard_price_old else None,
-                'options[download_text]': None,
-                'vps_path': product.vps_path,
-                's3_path': product.s3_path,                
-                'options[short_description]': product.inner_short_description,
-                'options[description]': product.description,
-                'options[free_sample_link_text]': product.free_sample_link_text,
-                'options[free_sample_link_url]': product.free_sample_link_url,
-                'options[free_sample_description]': product.free_sample_description,
-                'options[download_link_text]': product.download_link_text,
-                'options[download_link_url]': product.download_link_url,
-                'categories': str(product.category_ids),
-                'compatibilities': str(product.compatibilities_ids),
-                'tags': str(product.tags_ids),
-                'options[meta_title]': product.meta_title,
-                'options[meta_description]': product.meta_description,
-                'options[meta_keywords]': product.meta_keywords,
-                'options[features]': f"[{', '.join([f.model_dump_json() for f in product.features_short])}]",
-                '_method': 'PUT',
-                '_retrieved_at': str(int(datetime.now().timestamp())),
-            }
-            if product.thumbnail:
-                fields['__media__[material_image][0]'] = image_tools.make_img_field(product.thumbnail)
-            if product.thumbnail_retina:
-                fields['__media__[material_image_retina][0]'] = image_tools.make_img_field(product.thumbnail_retina)
-            if product.premium_thumbnail:
-                fields['__media__[material_image_for_catalog][0]'] = image_tools.make_img_field(product.premium_thumbnail)
-            if product.premium_thumbnail_retina:
-                fields['__media__[material_image_retina_for_catalog][0]'] = image_tools.make_img_field(product.premium_thumbnail_retina)
-            if product.push_image:
-                fields['__media__[push_image][0]'] = image_tools.make_img_field(product.push_image)
-            if product.main_image:
-                fields['__media__[premium_main][0]'] = image_tools.make_img_field(product.main_image)
-            if product.main_image_retina:
-                fields['__media__[premium_main_retina][0]'] = image_tools.make_img_field(product.main_image_retina)
-            for i, img in enumerate(product.gallery_images):
-                fields[f'__media__[premium_slider][{i}]'] = image_tools.make_img_field(img)
-            for i, img in enumerate(product.gallery_images_retina):
-                fields[f'__media__[premium_slider_retina][{i}]'] = image_tools.make_img_field(img)
-
-            form = MultipartEncoder(fields, boundary=boundary)
-            resp = self.session.post(
-                f'{self.site_url}/nova-api/premia/{product.ident}',
-                headers=headers,
-                data=form.to_string(),
-                params=params,
-                allow_redirects=False,
-            )
-            resp.raise_for_status()
-            if is_lite:
-                return
-            return self.get(product.ident, schemas.ProductType.premium)
-
-    def create(self, product: schemas.Product, is_lite: bool = False) -> schemas.Product | None:
+    async def create(self, product: schemas.NewProduct, is_lite: bool = False) -> schemas.NewProduct | None:
         """Create product."""
         if not self.edit_mode:
             raise ValueError('Edit mode is required')
         if product.ident:
             raise ValueError('Product id is not required')
         boundary = str(uuid.uuid4())
-        product = self._preapre_imgs(product)
         headers = {
             'Content-Type': f'multipart/form-data; boundary={boundary}',
-            'X-CSRF-TOKEN': self.session.cookies.get('XSRF-TOKEN'),
-            'X-XSRF-TOKEN': self.session.cookies.get('XSRF-TOKEN'),
+            'X-CSRF-TOKEN': self.session.cookie_jar.filter_cookies(self.site_url).get('XSRF-TOKEN').value,
+            'X-XSRF-TOKEN': self.session.cookie_jar.filter_cookies(self.site_url).get('XSRF-TOKEN').value,
             'X-Requested-With': 'XMLHttpRequest',
         }
         params = {'editing': 'true', 'editMode': 'create'}
-        if product.product_type == schemas.ProductType.freebie:
-            fields = {
-                'title': product.title,
-                'created_at': product.created_at.strftime("%Y-%m-%d %H:%M:%S.%f") if product.created_at else datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S.%f"),
-                'slug': product.slug,
-                'status': '1' if product.is_live else '0',
-                'size': product.size,
-                'short_description': product.short_description,
-                'description': product.description,
-                'show_stats': '1' if product.show_statistic else '0',
-                'email_download': '1' if product.email_download else '0',
-                'count_downloads': str(product.count_downloads) if product.count_downloads else None,
-                '__media__[material_image][0]': image_tools.make_img_field(product.thumbnail) if product.thumbnail else None,
-                '__media-custom-properties__[material_image][0][alt]': product.thumbnail.alt if product.thumbnail else None,
-                '__media__[material_image_retina][0]': image_tools.make_img_field(product.thumbnail_retina) if product.thumbnail_retina else None,
-                '__media-custom-properties__[material_image_retina][0][alt]': product.thumbnail_retina.alt if product.thumbnail_retina else None,
-                '__media__[push_image][0]': image_tools.make_img_field(product.push_image) if product.push_image else None,
-                '__media-custom-properties__[push_image][0][alt]': product.push_image.alt if product.push_image else None,
-                'author': None,
-                'author_trashed': None,
-                'options[download_text]': None,
-                'vps_path': product.vps_path,
-                's3_path': product.s3_path,
-                'options[custom_url]': product.custom_url,
-                'options[custom_url_title]': product.custom_url_title,
-                '__media__[single_image][0]': image_tools.make_img_field(product.main_image) if product.main_image else None,
-                '__media-custom-properties__[single_image][0][alt]': product.main_image.alt if product.main_image else None,
-                '__media__[single_image_retina][0]': image_tools.make_img_field(product.main_image_retina) if product.main_image_retina else None,
-                '__media-custom-properties__[single_image_retina][0][alt]': product.main_image_retina.alt if product.main_image_retina else None,
-                'options[author_name]': product.author_name,
-                'options[author_link]': product.author_url,
-                'options[card_title]': product.card_title,
-                'options[card_description]': product.card_description,
-                'options[card_button_text]': product.card_button_text,
-                'options[card_button_link]': product.card_button_link,
-                'options[button_text]': product.button_text,
-                'live_preview_type': product.live_preview_type,
-                'options[live_preview_text]': product.live_preview_text,
-                'options[live_preview_link]': product.live_preview_link,
-                'options[features]': f"[{', '.join([f.model_dump_json() for f in product.features])}]",
-                'categories': str(product.category_ids),
-                'formats': str(product.format_ids),
-                'fonts': None,
-                'options[meta_title]': product.meta_title,
-                'options[meta_description]': product.meta_description,
-                'options[meta_keywords]': product.meta_keywords,
-                'tags': str(product.tags_ids),
-            }
-            fields.update({
-                f'__media__[photo_gallery_2][{i}]': image_tools.make_img_field(img) for i, img in enumerate(product.gallery_images)
-                }
-            )
-            fields.update({
-                f'__media-custom-properties__[photo_gallery_2][{i}][alt]': img.alt for i, img in enumerate(product.gallery_images) if product.gallery_images[i].alt
-                }
-            )
-            fields.update({
-                f'__media__[photo_gallery_2_retina][{i}]': image_tools.make_img_field(img) for i, img in enumerate(product.gallery_images_retina)
-                }
-            )
-            fields.update({
-                f'__media-custom-properties__[photo_gallery_2_retina][{i}][alt]': img.alt for i, img in enumerate(product.gallery_images_retina) if product.gallery_images_retina[i].alt
-                }
-            )
-            form = MultipartEncoder(fields, boundary=boundary)
-            resp = self.session.post(
-                f'{self.site_url}/nova-api/freebies',
-                headers=headers,
-                data=form.to_string(),
-                params=params,
-                allow_redirects=False,
-            )
+        fields = {
+            'title': product.title,
+            'created_at': product.created_at.strftime("%Y-%m-%d %H:%M:%S") if product.created_at else datetime.now(tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
+            'slug': self._get_slug(product.title, product.slug),
+            'status': '1' if product.is_live else '0',
+            'type': str(product.product_type.value),
+            'only_registered_download': '1' if product.only_registered_download else '0',
+            'creator': str(product.creator_id),
+            'creator_trashed': 'false',
+            'special': '1' if product.is_special else '0',
+            'excerpt': product.excerpt,
+            'description': product.description,
+            'size': product.size,
+            'price_commercial': self._cents_to_price(product.price_commercial_cent),
+            'price_extended': self._cents_to_price(product.price_extended_cent),
+            'price_commercial_sale': self._cents_to_price(product.price_commercial_sale_cent),
+            'price_extended_sale': self._cents_to_price(product.price_extended_sale_cent),
+            '___nova_flexible_content_fields': '["presentation"]',
+            'presentation': '',
+            'vps_path': product.vps_path,
+            's3_path': product.s3_path,
+            'category': str(product.category_id),
+            'category_trashed': 'false',
+            'tags': str(product.tags_ids),
+            'options[formats]': product.formats,
+            'options[custom_btn_text]': product.custom_btn_text,
+            'options[custom_btn_url]': product.custom_btn_url,
+            'fonts': str(product.font_ids) if product.font_ids else '[]',
+            'options[meta_title]': product.meta_title,
+            'options[meta_description]': product.meta_description,
+            'options[meta_keywords]': product.meta_keywords,
+            'viaResource': '',
+            'viaResourceId': '',
+            'viaRelationship': '',
+        }
+        if product.thumbnail:
+            fields['__media__[thumbnail][0]'] = image_tools.make_img_field(product.thumbnail)
+            if product.thumbnail.alt:
+                fields['__media-custom-properties__[thumbnail][0][alt]'] = product.thumbnail.alt
+        if product.push_image:
+            fields['__media__[push_image][0]'] = image_tools.make_img_field(product.push_image)
+            if product.push_image.alt:
+                fields['__media-custom-properties__[push_image][0][alt]'] = product.push_image.alt
+        for i, img in enumerate(product.images):
+            fields[f'__media__[images][{i}]'] = image_tools.make_img_field(img)
+            if img.alt:
+                fields[f'__media-custom-properties__[images][{i}][alt]'] = img.alt
+        form = MultipartEncoder(fields, boundary=boundary)
+        async with self.session.post(
+            f'{self.site_url}/nova-api/products',
+            headers=headers,
+            data=form.to_string(),
+            params=params,
+            allow_redirects=False,
+        ) as resp:
             resp.raise_for_status()
-        elif product.product_type == schemas.ProductType.plus:
-            fields = {
-                'title': product.title,
-                'slug': product.slug,
-                'created_at': product.created_at.strftime("%Y-%m-%d %H:%M:%S.%f") if product.created_at else datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S.%f"),
-                'status': '1' if product.is_live else '0',
-                'short_description': product.short_description,
-                'description': product.description,
-                'size': product.size,
-                'show_stats': '1' if product.show_statistic else '0',
-                'count_downloads': str(product.count_downloads) if product.count_downloads else None,
-                '__media__[material_image][0]': image_tools.make_img_field(product.thumbnail) if product.thumbnail else None,
-                '__media-custom-properties__[material_image][0][alt]': product.thumbnail.alt if product.thumbnail else None,
-                '__media__[material_image_retina][0]': image_tools.make_img_field(product.thumbnail_retina) if product.thumbnail_retina else None,
-                '__media-custom-properties__[material_image_retina][0][alt]': product.thumbnail_retina.alt if product.thumbnail_retina else None,
-                '__media__[push_image][0]': image_tools.make_img_field(product.push_image) if product.push_image else None,
-                '__media-custom-properties__[push_image][0][alt]': product.push_image.alt if product.push_image else None,
-                'author': None,
-                'author_trashed': None,
-                'options[download_text]': None,
-                'vps_path': product.vps_path,
-                's3_path': product.s3_path,
-                '__media__[single_image][0]': image_tools.make_img_field(product.main_image) if product.main_image else None,
-                '__media-custom-properties__[single_image][0][alt]': product.main_image.alt if product.main_image else None,
-                '__media__[single_image_retina][0]': image_tools.make_img_field(product.main_image_retina) if product.main_image_retina else None,
-                '__media-custom-properties__[single_image_retina][0][alt]': product.main_image_retina.alt if product.main_image_retina else None,
-                'options[author_name]': product.author_name,
-                'options[author_link]': product.author_url,
-                'options[card_title]': product.card_title,
-                'options[card_description]': product.card_description,
-                'options[card_button_text]': product.card_button_text,
-                'options[card_button_link]': product.card_button_link,
-                'options[button_text]': product.button_text,
-                'live_preview_type': product.live_preview_type,
-                'options[live_preview_text]': product.live_preview_text,
-                'options[live_preview_link]': product.live_preview_link,
-                'options[features]': f"[{', '.join([f.model_dump_json() for f in product.features])}]",
-                'categories': str(product.category_ids),
-                'formats': str(product.format_ids),
-                'fonts': str(product.font_ids),
-                'options[meta_title]': product.meta_title,
-                'options[meta_description]': product.meta_description,
-                'options[meta_keywords]': product.meta_keywords,
-                'tags': str(product.tags_ids),
-            }
-            fields.update({
-                f'__media__[photo_gallery_2][{i}]': image_tools.make_img_field(img) for i, img in enumerate(product.gallery_images)
-                }
-            )
-            fields.update({
-                f'__media-custom-properties__[photo_gallery_2][{i}][alt]': img.alt for i, img in enumerate(product.gallery_images) if product.gallery_images[i].alt
-                }
-            )
-            fields.update({
-                f'__media__[photo_gallery_2_retina][{i}]': image_tools.make_img_field(img) for i, img in enumerate(product.gallery_images_retina)
-                }
-            )
-            fields.update({
-                f'__media-custom-properties__[photo_gallery_2_retina][{i}][alt]': img.alt for i, img in enumerate(product.gallery_images_retina) if product.gallery_images_retina[i].alt
-                }
-            )
-            form = MultipartEncoder(fields, boundary=boundary)
-            resp = self.session.post(
-                f'{self.site_url}/nova-api/pluses',
-                headers=headers,
-                data=form.to_string(),
-                params=params,
-                allow_redirects=False,
-            )
+            new_product_raw = await resp.json()
+            new_product = await self.get(new_product_raw['id'])
+            new_product.presentation = product.presentation
+        return await self.update(new_product, is_lite=is_lite)
 
+    async def delete(self, product_ident: int) -> None:
+        """Delete product."""
+        if not self.edit_mode:
+            raise ValueError('Edit mode is required')
+        params = {'resources[]': product_ident}
+        headers = {
+            'X-CSRF-TOKEN': self.session.cookie_jar.filter_cookies(self.site_url).get('XSRF-TOKEN').value,
+            'X-XSRF-TOKEN': self.session.cookie_jar.filter_cookies(self.site_url).get('XSRF-TOKEN').value,
+            'X-Requested-With': 'XMLHttpRequest',
+        }
+        async with self.session.delete(f'{self.site_url}/nova-api/products', params=params, headers=headers) as resp:
             resp.raise_for_status()
-        elif product.product_type == schemas.ProductType.premium:
-            fields = {
-                'title': product.title,
-                'slug': product.slug,
-                'created_at': product.created_at.strftime("%Y-%m-%d %H:%M:%S.%f") if product.created_at else datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S.%f"),
-                'status': '1' if product.is_live else '0',
-                'short_description': product.inner_short_description,
-                'price_extended': str(product.extended_price) if product.extended_price else None,
-                'price_standard': str(product.standard_price) if product.standard_price else None,
-                'price_extended_old': str(product.extended_price_old) if product.extended_price_old else None,
-                'price_standard_old': str(product.standard_price_old) if product.standard_price_old else None,
-                '__media__[material_image][0]': image_tools.make_img_field(product.thumbnail) if product.thumbnail else None,
-                '__media-custom-properties__[material_image][0][alt]': product.thumbnail.alt if product.thumbnail else None,
-                '__media__[material_image_retina][0]': image_tools.make_img_field(product.thumbnail_retina) if product.thumbnail_retina else None,
-                '__media-custom-properties__[material_image_retina][0][alt]': product.thumbnail_retina.alt if product.thumbnail_retina else None,
-                '__media__[material_image_for_catalog][0]': image_tools.make_img_field(product.premium_thumbnail) if product.premium_thumbnail else None,
-                '__media-custom-properties__[material_image_for_catalog][0][alt]': product.premium_thumbnail.alt if product.premium_thumbnail else None,
-                '__media__[material_image_retina_for_catalog][0]': image_tools.make_img_field(product.premium_thumbnail_retina) if product.premium_thumbnail_retina else None,
-                '__media-custom-properties__[material_image_retina_for_catalog][0][alt]': product.premium_thumbnail_retina.alt if product.premium_thumbnail_retina else None,
-                '__media__[push_image][0]': image_tools.make_img_field(product.push_image) if product.push_image else None,
-                '__media-custom-properties__[push_image][0][alt]': product.push_image.alt if product.push_image else None,
-                'options[download_text]': None,
-                'vps_path': product.vps_path,
-                's3_path': product.s3_path,
-                '__media__[premium_main][0]': image_tools.make_img_field(product.main_image) if product.main_image else None,
-                '__media-custom-properties__[premium_main][0][alt]': product.main_image.alt if product.main_image else None,
-                '__media__[premium_main_retina][0]': image_tools.make_img_field(product.main_image_retina) if product.main_image_retina else None,
-                '__media-custom-properties__[premium_main_retina][0][alt]': product.main_image_retina.alt if product.main_image_retina else None,
-                'options[short_description]': product.short_description,
-                'options[description]': product.description,
-                'options[free_sample_link_text]': None,
-                'options[free_sample_link_url]': None,
-                'options[free_sample_description]': None,
-                'options[download_link_text]': None,
-                'options[download_link_url]': None,
-                'categories': str(product.category_ids),
-                'compatibilities': str(product.compatibilities_ids),
-                'options[features]': f"[{', '.join([f.model_dump_json() for f in product.features_short])}]",
-                'options[meta_title]': product.meta_title,
-                'options[meta_description]': product.meta_description,
-                'options[meta_keywords]': product.meta_keywords,
-                'tags': str(product.tags_ids),
-            }
-            fields.update({
-                f'__media__[premium_slider][{i}]': image_tools.make_img_field(img) for i, img in enumerate(product.gallery_images)
-                }
-            )
-            fields.update({
-                f'__media-custom-properties__[premium_slider][{i}][alt]': img.alt for i, img in enumerate(product.gallery_images) if product.gallery_images[i].alt
-                }
-            )
-            fields.update({
-                f'__media__[premium_slider_retina][{i}]': image_tools.make_img_field(img) for i, img in enumerate(product.gallery_images_retina)
-                }
-            )
-            fields.update({
-                f'__media-custom-properties__[premium_slider_retina][{i}][alt]': img.alt for i, img in enumerate(product.gallery_images_retina) if product.gallery_images_retina[i].alt
-                }
-            )
 
-            form = MultipartEncoder(fields, boundary=boundary)
-            resp = self.session.post(
-                f'{self.site_url}/nova-api/premia',
-                headers=headers,
-                data=form.to_string(),
-                params=params,
-                allow_redirects=False,
-            )
-            resp.raise_for_status()
-        if is_lite:
-            return
-        return self.get(resp.json()['resource']['id'], product.product_type)
+    async def _get_tag_ids(self, product_ident: int) -> list[int]:
+        tag_ids = []
+        is_next_page = True
+        params = {
+            'perPage': '100',
+            'viaResource': 'products',
+            'viaResourceId': str(product_ident),
+            'viaRelationship': 'tags',
+            'relationshipType': 'morphToMany'
+        }
+        while is_next_page:
+            async with self.session.get(f'{self.site_url}/nova-api/tags', params=params) as resp:
+                resp.raise_for_status()
+                raw_page = await resp.json()
+                for row in raw_page['resources']:
+                    tag_ids.append(row['id']['value'])
+                if raw_page.get('next_page_url'):
+                    parsed_url = urlparse(raw_page.get('next_page_url'))
+                    params.update(parse_qs(parsed_url.query))
+                else:
+                    is_next_page = False
+        return tag_ids
 
-    def _preapre_imgs(self, product: schemas.Product) -> schemas.Product:
-        product.thumbnail = image_tools.prepare_image(product.thumbnail) if product.thumbnail and not product.thumbnail.ident else product.thumbnail
-        product.thumbnail_retina = image_tools.prepare_image(product.thumbnail_retina) if product.thumbnail_retina and not product.thumbnail_retina.ident else product.thumbnail_retina
-        product.premium_thumbnail = image_tools.prepare_image(product.premium_thumbnail) if product.premium_thumbnail and not product.premium_thumbnail.ident else product.premium_thumbnail
-        product.premium_thumbnail_retina = image_tools.prepare_image(product.premium_thumbnail_retina) if product.premium_thumbnail_retina and not product.premium_thumbnail_retina.ident else product.premium_thumbnail_retina
-        product.push_image = image_tools.prepare_image(product.push_image) if product.push_image and not product.push_image.ident else product.push_image
-        product.main_image = image_tools.prepare_image(product.main_image) if product.main_image and not product.main_image.ident else product.main_image
-        product.main_image_retina = image_tools.prepare_image(product.main_image_retina) if product.main_image_retina and not product.main_image_retina.ident else product.main_image_retina
-        product.old_img = image_tools.prepare_image(product.old_img) if product.old_img and not product.old_img.ident else product.old_img
-        product.old_img_retina = image_tools.prepare_image(product.old_img_retina) if product.old_img_retina and not product.old_img_retina.ident else product.old_img_retina
-        product.gallery_images = [image_tools.prepare_image(img) if img and not img.ident else img for img in product.gallery_images]
-        product.gallery_images_retina = [image_tools.prepare_image(img) if img and not img.ident else img for img in product.gallery_images_retina]
-        return product
+    async def _get_fonts(self, product_ident: int) -> list[int]:
+        font_ids = []
+        is_next_page = True
+        params = {
+            'perPage': '100',
+            'viaResource': 'products',
+            'viaResourceId': str(product_ident),
+            'viaRelationship': 'fonts',
+            'relationshipType': 'morphToMany'
+        }
+        while is_next_page:
+            async with self.session.get(f'{self.site_url}/nova-api/fonts', params=params) as resp:
+                resp.raise_for_status()
+                raw_page = await resp.json()
+                for row in raw_page['resources']:
+                    font_ids.append(row['id']['value'])
+                if raw_page.get('next_page_url'):
+                    parsed_url = urlparse(raw_page.get('next_page_url'))
+                    params.update(parse_qs(parsed_url.query))
+                else:
+                    is_next_page = False
+        return font_ids
+
+    def _price_to_cents(self, price: int | None) -> int | None:
+        if price is None:
+            return price
+        return price * 100
+
+    def _cents_to_price(self, price: int | None) -> str | None:
+        if price is None:
+            return price
+        return str(price // 100)
+
+    def _get_slug(self, title: str, slug: str | None = None) -> str:
+        raw_slug = slug or title
+        raw_slug = raw_slug.strip().lower()
+        raw_slug = re.sub(r'[^a-z0-9 -]', '-', raw_slug)
+        raw_slug = re.sub(r'\s+', '-', raw_slug)
+        raw_slug = re.sub(r'-+', '-', raw_slug)
+        return raw_slug
+
+    def _get_presentation(self, presentation: list, images: list[schemas.Image]) -> str:
+        result = []
+        is_first_row = True
+        for row in presentation:
+
+            if not is_first_row:
+                new_row = '1'
+            else:
+                new_row = '0'
+                is_first_row = False
+
+            for placeholder in row:
+                if isinstance(placeholder, schemas.ProductLayoutImg):
+                    key = placeholder.ident or f'{str(uuid.uuid4()).replace("-", "")}-image'
+                    result.append({
+                        'layout': 'image',
+                        'key': key,
+                        'attributes': {
+                            f'{key}__image': placeholder.img_id or images[placeholder.img_n].ident,
+                            f'{key}__new_row': new_row,
+                        }
+                    })
+                elif isinstance(placeholder, schemas.ProductLayoutVideo):
+                    key = placeholder.ident or f'{str(uuid.uuid4()).replace("-", "")}-video'
+                    result.append({
+                        'layout': 'video',
+                        'key': key,
+                        'attributes': {
+                            f'{key}__title': placeholder.title,
+                            f'{key}__link': placeholder.link,
+                            f'{key}__new_row': new_row,
+                        }
+                    })
+                new_row = '0'
+        return json.dumps(result)

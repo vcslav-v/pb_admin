@@ -1,23 +1,23 @@
-from requests import Session
+from aiohttp import ClientSession
 from pb_admin import schemas
 import uuid
 from requests_toolbelt import MultipartEncoder
 
 
 class Tools():
-    def __init__(self, session: Session, site_url: str, edit_mode: bool) -> None:
+    def __init__(self, session: ClientSession, site_url: str, edit_mode: bool) -> None:
         self.session = session
         self.site_url = site_url
         self.edit_mode = edit_mode
 
-    def make_push(self, product_ids: list[int], product_type: schemas.ProductType) -> None:
+    async def make_push(self, product_ids: list[int], product_type: schemas.ProductType) -> None:
         if not self.edit_mode:
             raise ValueError('Edit mode is requared.')
         boundary = str(uuid.uuid4())
         headers = {
             'Content-Type': f'multipart/form-data; boundary={boundary}',
-            'X-CSRF-TOKEN': self.session.cookies.get('XSRF-TOKEN'),
-            'X-XSRF-TOKEN': self.session.cookies.get('XSRF-TOKEN'),
+            'X-CSRF-TOKEN': self.session.cookie_jar.filter_cookies(self.site_url).get('XSRF-TOKEN').value,
+            'X-XSRF-TOKEN': self.session.cookie_jar.filter_cookies(self.site_url).get('XSRF-TOKEN').value,
             'X-Requested-With': 'XMLHttpRequest',
         }
         params = {
@@ -41,10 +41,10 @@ class Tools():
         else:
             raise ValueError('Unknown product type.')
 
-        resp = self.session.post(
+        async with self.session.post(
             _url,
             params=params,
             headers=headers,
             data=form.to_string(),
-        )
-        resp.raise_for_status()
+        ) as resp:
+            resp.raise_for_status()

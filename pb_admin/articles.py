@@ -1,4 +1,4 @@
-from requests import Session
+from aiohttp import ClientSession
 from urllib.parse import urlparse, parse_qs
 from pb_admin import schemas, _image_tools as image_tools, _config as config
 from loguru import logger
@@ -9,12 +9,12 @@ from datetime import datetime
 
 
 class Articles():
-    def __init__(self, session: Session, site_url: str, edit_mode: bool) -> None:
+    def __init__(self, session: ClientSession, site_url: str, edit_mode: bool) -> None:
         self.session = session
         self.site_url = site_url
         self.edit_mode = edit_mode
 
-    def get_list(self, search: str = None) -> list[schemas.Article]:
+    async def get_list(self, search: str = None) -> list[schemas.Article]:
         articles = []
         is_next_page = True
         params = {
@@ -22,64 +22,64 @@ class Articles():
             'search': search or '',
         }
         while is_next_page:
-            resp = self.session.get(f'{self.site_url}/nova-api/articles', params=params)
-            resp.raise_for_status()
-            raw_page = resp.json()
-            values = {}
-            for row in raw_page['resources']:
-                for raw_article_field in row['fields']:
-                    if raw_article_field['attribute'] == 'author':
-                        values[raw_article_field['attribute']] = raw_article_field['belongsToId']
-                    else:
-                        values[raw_article_field['attribute']] = raw_article_field['value']
-                articles.append(
-                    schemas.Article(
-                        ident=values.get('id'),
-                        created_at=datetime.fromisoformat(values.get('created_at')),
-                        title=values.get('title'),
-                        slug=values.get('slug'),
-                        is_live=True if values.get('status') == 'Live' else False,
-                        is_sponsored=values.get('sponsored'),
-                        show_statistic=values.get('show_stats'),
-                        count_views=values.get('count_views'),
-                        author=values.get('author'),
+            async with self.session.get(f'{self.site_url}/nova-api/articles', params=params) as resp:
+                resp.raise_for_status()
+                raw_page = await resp.json()
+                values = {}
+                for row in raw_page['resources']:
+                    for raw_article_field in row['fields']:
+                        if raw_article_field['attribute'] == 'author':
+                            values[raw_article_field['attribute']] = raw_article_field['belongsToId']
+                        else:
+                            values[raw_article_field['attribute']] = raw_article_field['value']
+                    articles.append(
+                        schemas.Article(
+                            ident=values.get('id'),
+                            created_at=datetime.fromisoformat(values.get('created_at')),
+                            title=values.get('title'),
+                            slug=values.get('slug'),
+                            is_live=True if values.get('status') == 'Live' else False,
+                            is_sponsored=values.get('sponsored'),
+                            show_statistic=values.get('show_stats'),
+                            count_views=values.get('count_views'),
+                            author=values.get('author'),
+                        )
                     )
-                )
 
-            if raw_page.get('next_page_url'):
-                parsed_url = urlparse(raw_page.get('next_page_url'))
-                params.update(parse_qs(parsed_url.query))
+                if raw_page.get('next_page_url'):
+                    parsed_url = urlparse(raw_page.get('next_page_url'))
+                    params.update(parse_qs(parsed_url.query))
 
-            else:
-                is_next_page = False
+                else:
+                    is_next_page = False
 
         return articles
 
-    def get(self, article_ident: int) -> schemas.Article:
-        resp = self.session.get(f'{self.site_url}/nova-api/articles/{article_ident}')
-        resp.raise_for_status()
-        raw_article = resp.json()
-        raw_article_fields = raw_article['resource']['fields']
-        values = {}
-        for raw_article_field in raw_article_fields:
-            if raw_article_field['attribute'] == 'author':
-                values[raw_article_field['attribute']] = raw_article_field['belongsToId']
+    async def get(self, article_ident: int) -> schemas.Article:
+        async with self.session.get(f'{self.site_url}/nova-api/articles/{article_ident}') as resp:
+            resp.raise_for_status()
+            raw_article = await resp.json()
+            raw_article_fields = raw_article['resource']['fields']
+            values = {}
+            for raw_article_field in raw_article_fields:
+                if raw_article_field['attribute'] == 'author':
+                    values[raw_article_field['attribute']] = raw_article_field['belongsToId']
+                else:
+                    values[raw_article_field['attribute']] = raw_article_field['value']
+            if values.get('options'):
+                meta_title = values['options'].get('meta_title')
+                meta_description = values['options'].get('meta_description')
+                meta_keywords = values['options'].get('meta_keywords')
             else:
-                values[raw_article_field['attribute']] = raw_article_field['value']
-        if values.get('options'):
-            meta_title = values['options'].get('meta_title')
-            meta_description = values['options'].get('meta_description')
-            meta_keywords = values['options'].get('meta_keywords')
-        else:
-            meta_title = None
-            meta_description = None
-            meta_keywords = None
+                meta_title = None
+                meta_description = None
+                meta_keywords = None
 
-        categories_resp = self.session.get(
+        async with self.session.get(
             f'{self.site_url}/nova-vendor/nova-attach-many/articles/{values["id"]}/attachable/categories'
-        )
-        raw_categoies = categories_resp.json()
-        categories_ids = list(set(raw_categoies['selected']))
+        ) as categories_resp:
+            raw_categoies = await categories_resp.json()
+            categories_ids = list(set(raw_categoies['selected']))
 
         return schemas.Article(
             ident=values.get('id'),
@@ -134,17 +134,17 @@ class Articles():
             content=[self.get_article_block(block) for block in values['content']] if values.get('content') else [],
         )
 
-    def update(self, article: schemas.Article, is_lite: bool = True) -> schemas.Article:
+    async def update(self, article: schemas.Article, is_lite: bool = True) -> schemas.Article:
         if not self.edit_mode:
             raise ValueError('Edit mode is required')
         if not article.ident:
             raise ValueError('Article id is required')
         boundary = str(uuid.uuid4())
-        article = self._prepare_imgs(article)
+        article = await self._prepare_imgs(article)
         headers = {
             'Content-Type': f'multipart/form-data; boundary={boundary}',
-            'X-CSRF-TOKEN': self.session.cookies.get('XSRF-TOKEN'),
-            'X-XSRF-TOKEN': self.session.cookies.get('XSRF-TOKEN'),
+            'X-CSRF-TOKEN': self.session.cookie_jar.filter_cookies(self.site_url).get('XSRF-TOKEN').value,
+            'X-XSRF-TOKEN': self.session.cookie_jar.filter_cookies(self.site_url).get('XSRF-TOKEN').value,
             'X-Requested-With': 'XMLHttpRequest',
         }
         params = {'editing': 'true', 'editMode': 'update'}
@@ -180,17 +180,17 @@ class Articles():
             fields['__media__[article_main_retina][0]'] = image_tools.make_img_field(article.main_image_retina)
 
         form = MultipartEncoder(fields, boundary=boundary)
-        resp = self.session.post(
+        async with self.session.post(
             f'{self.site_url}/nova-api/articles/{article.ident}',
             headers=headers,
             data=form.to_string(),
             params=params,
             allow_redirects=False,
-        )
-        resp.raise_for_status()
+        ) as resp:
+            resp.raise_for_status()
         if is_lite:
             return
-        return self.get(article.ident)
+        return await self.get(article.ident)
 
     @staticmethod
     def get_article_block(
@@ -315,11 +315,11 @@ class Articles():
                     f'{block.key}__image_title': block.image_title or '',
                 }
             }
-    # @staticmethod
-    def _prepare_imgs(self, article: schemas.Article) -> schemas.Article:
-        article.thumbnail = image_tools.prepare_image(article.thumbnail, session=self.session) if article.thumbnail else None
-        article.thumbnail_retina = image_tools.prepare_image(article.thumbnail_retina, session=self.session) if article.thumbnail_retina else None
-        article.push_image = image_tools.prepare_image(article.push_image, session=self.session) if article.push_image else None
-        article.main_image = image_tools.prepare_image(article.main_image, session=self.session) if article.main_image else None
-        article.main_image_retina = image_tools.prepare_image(article.main_image_retina, session=self.session) if article.main_image_retina else None
+
+    async def _prepare_imgs(self, article: schemas.Article) -> schemas.Article:
+        article.thumbnail = await image_tools.prepare_image(article.thumbnail, session=self.session) if article.thumbnail else None
+        article.thumbnail_retina = await image_tools.prepare_image(article.thumbnail_retina, session=self.session) if article.thumbnail_retina else None
+        article.push_image = await image_tools.prepare_image(article.push_image, session=self.session) if article.push_image else None
+        article.main_image = await image_tools.prepare_image(article.main_image, session=self.session) if article.main_image else None
+        article.main_image_retina = await image_tools.prepare_image(article.main_image_retina, session=self.session) if article.main_image_retina else None
         return article

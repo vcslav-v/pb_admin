@@ -1,25 +1,25 @@
 from PIL import Image
-import requests
+from aiohttp import ClientSession
 import uuid
 import io
 
 from pb_admin import schemas
 
 
-def prepare_image(
+async def prepare_image(
     image: schemas.Image,
     min_size: tuple[int, int] = [-1, -1],
     max_size: tuple[int, int] = [-1, -1],
-    session: requests.Session = None
+    session: ClientSession = None
 ) -> schemas.Image:
     """Prepare image for upload to Pixelbuddha."""
     if not image.original_url and not image.data:
         raise ValueError('Either original_url or data must be provided.')
     elif image.original_url and not image.data:
-        raw_img = session.get(image.original_url)
-        raw_img.raise_for_status()
-        image.data = raw_img.content
-        img_file = io.BytesIO(raw_img.content)
+        async with session.get(image.original_url) as raw_img:
+            raw_img.raise_for_status()
+            image.data = await raw_img.read()
+            img_file = io.BytesIO(image.data)
     else:
         img_file = io.BytesIO(image.data)
     img = Image.open(img_file)
