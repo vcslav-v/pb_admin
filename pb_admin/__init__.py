@@ -74,3 +74,12 @@ class PbSession():
         }
         async with self.session.post(f'{self.site_url}/admin/login', data=payload) as resp:
             resp.raise_for_status()
+
+    async def close(self):
+        await self.session.close()
+
+    async def __aenter__(self):
+        return self.connect()
+
+    async def __aexit__(self, exc_type, exc_value, traceback):
+        await self.close()
