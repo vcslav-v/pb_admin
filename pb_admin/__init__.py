@@ -79,7 +79,8 @@ class PbSession():
         await self.session.close()
 
     async def __aenter__(self) -> 'PbSession':
-        return self.connect()
+        await self.connect()
+        return self
 
     async def __aexit__(self, exc_type, exc_value, traceback):
         await self.close()
