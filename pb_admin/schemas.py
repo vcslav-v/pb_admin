@@ -321,3 +321,22 @@ class NewProduct(NewProductLite):
     meta_title: str | None = None
     meta_description: str | None = None
     meta_keywords: str | None = None
+
+
+class PaymentStatus(str, Enum):
+    created = 'created'
+    waiting = 'waiting'
+    fraud = 'fraud'
+    insufficient = 'insufficient'
+    cancelled = 'cancelled'
+    declined = 'declined'
+    expired = 'expired'
+    payed = 'payed'
+
+
+class Payment(BaseModel):
+    ident: int
+    order_id: int | None
+    price_cent: int
+    status: PaymentStatus
+    created_at: datetime
