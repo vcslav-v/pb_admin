@@ -328,7 +328,7 @@ class PaymentStatus(str, Enum):
     waiting = 'waiting'
     fraud = 'fraud'
     insufficient = 'insufficient'
-    cancelled = 'cancelled'
+    cancel = 'cancel'
     declined = 'declined'
     expired = 'expired'
     payed = 'payed'
