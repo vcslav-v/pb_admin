@@ -167,7 +167,7 @@ class Products():
                 creator_id=values.get('creator_id'),
                 size=values.get('size'),
                 category_id=values.get('category_id'),
-                excerpt=values.get('excerpt'),
+                excerpt=values.get('excerpt', ''),
                 description=values.get('description'),
                 price_commercial_cent=self._price_to_cents(values.get('price_commercial')),
                 price_extended_cent=self._price_to_cents(values.get('price_extended')),
