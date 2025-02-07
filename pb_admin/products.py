@@ -187,6 +187,8 @@ class Products():
                 meta_title=values.get('meta_title'),
                 meta_description=values.get('meta_description'),
                 meta_keywords=values.get('meta_keywords'),
+                count_downloads_unique=values.get('count_downloads_unique'),
+                count_downloads=values.get('count_downloads'),
             )
         return product
 

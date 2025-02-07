@@ -321,6 +321,8 @@ class NewProduct(NewProductLite):
     meta_title: str | None = None
     meta_description: str | None = None
     meta_keywords: str | None = None
+    count_downloads_unique: int = 0
+    count_downloads: int = 0
 
 
 class PaymentStatus(str, Enum):
