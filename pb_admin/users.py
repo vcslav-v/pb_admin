@@ -20,14 +20,19 @@ class Users():
             async with self.session.get(f'{self.site_url}/nova-api/users', params=params) as resp:
                 resp.raise_for_status()
                 raw_page = await resp.json()
+                values = {}
                 for row in raw_page['resources']:
-                    values = {cell['attribute']: cell['value'] for cell in row['fields']}
+                    for cell in row['fields']: 
+                        if cell['attribute'] == 'email' and cell.get('thumbnailUrl'):
+                            values['userpic'] = cell['thumbnailUrl']
+                        values[cell['attribute']] = cell['value']
 
                     users.append(
                         schemas.PbUser(
                             ident=values.get('id'),
                             name=values.get('name'),
                             email=values.get('email'),
+                            userpic=values.get('userpic')
                         )
                     )
                 if raw_page.get('next_page_url'):

@@ -164,6 +164,7 @@ class PbUser(BaseModel):
     ident: int
     name: str
     email: str
+    userpic: str | None = None
 
 
 class Order(BaseModel):
@@ -308,6 +309,7 @@ class NewProduct(NewProductLite):
     price_extended_sale_cent: int | None
     thumbnail: Image | None
     push_image: Image | None
+    image_border: bool = False
     images: list[Image] = []
     only_registered_download: bool = False
     presentation: list[list[ProductLayoutImg | ProductLayoutVideo]] = []
