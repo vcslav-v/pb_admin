@@ -3,6 +3,7 @@ from urllib.parse import urlparse, parse_qs
 from pb_admin import schemas
 import uuid
 from requests_toolbelt import MultipartEncoder
+from datetime import datetime
 
 
 class Creators():
@@ -53,7 +54,6 @@ class Creators():
                     mime_type=values['avatar'][0]['mime_type'],
                     original_url=values['avatar'][0]['original_url'],
                     file_name=values['avatar'][0]['file_name'],
-                    alt=values['avatar'][0]['custom_properties'].get('alt'),
                 ) if values.get('avatar') else None,
             )
         return creator
@@ -85,6 +85,42 @@ class Creators():
         form = MultipartEncoder(fields, boundary=boundary)
         async with self.session.post(
             f'{self.site_url}/nova-api/creators?editing=true&editMode=create',
+            data=form.to_string(),
+            headers=headers,
+            allow_redirects=False
+        ) as resp:
+            resp.raise_for_status()
+            raw_creator = await resp.json()
+        return await self.get(raw_creator['resource']['id'])
+
+    async def update(self, creator: schemas.Creator) -> schemas.Creator:
+        if not self.edit_mode:
+            raise Exception('Edit mode is required.')
+        boundary = str(uuid.uuid4())
+        headers = {
+            'Content-Type': f'multipart/form-data; boundary={boundary}',
+            'X-CSRF-TOKEN': self.session.cookie_jar.filter_cookies(self.site_url).get('XSRF-TOKEN').value,
+            'X-XSRF-TOKEN': self.session.cookie_jar.filter_cookies(self.site_url).get('XSRF-TOKEN').value,
+            'X-Requested-With': 'XMLHttpRequest',
+        }
+        fields = {
+            'name': creator.name,
+            'description': creator.description,
+            'link': creator.link if creator.link else '',
+            '_method': 'PUT',
+            '_retrieved_at': str(int(datetime.now().timestamp())),
+        }
+        if creator.avatar and creator.avatar.ident:
+            fields['__media__[avatar][0]'] = str(creator.avatar.ident)
+        elif creator.avatar:
+            fields['__media__[avatar][0]'] = (
+                creator.avatar.file_name,
+                creator.avatar.data,
+                creator.avatar.mime_type
+            )
+        form = MultipartEncoder(fields, boundary=boundary)
+        async with self.session.post(
+            f'{self.site_url}/nova-api/creators/{creator.ident}??viaResource=&viaResourceId=&viaRelationship=&editing=true&editMode=update',
             data=form.to_string(),
             headers=headers,
             allow_redirects=False
