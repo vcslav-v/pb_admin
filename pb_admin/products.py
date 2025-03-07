@@ -160,6 +160,8 @@ class Products():
                 title=values.get('title'),
                 slug=values.get('slug'),
                 created_at=values.get('created_at'),
+                expires_at=values.get('expires_at'),
+                time_limited_subtitle=values.get('time_limited_subtitle'),
                 is_special=values.get('special'),
                 is_live=values.get('status'),
                 product_type=values.get('product_type'),
@@ -210,6 +212,8 @@ class Products():
         fields = {
             'title': product.title,
             'created_at': product.created_at.strftime("%Y-%m-%d %H:%M:%S.%f") if product.created_at else datetime.now(tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S.%f"),
+            'expires_at': product.expires_at.strftime("%Y-%m-%d %H:%M:%S.%f") if product.expires_at else '',
+            'time_limited_subtitle': product.time_limited_subtitle or '',
             'slug': self._get_slug(product.title, product.slug),
             'status': '1' if product.is_live else '0',
             'type': str(product.product_type.value),
@@ -288,6 +292,8 @@ class Products():
         fields = {
             'title': product.title,
             'created_at': product.created_at.strftime("%Y-%m-%d %H:%M:%S") if product.created_at else datetime.now(tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
+            'expires_at': product.expires_at.strftime("%Y-%m-%d %H:%M:%S") if product.expires_at else '',
+            'time_limited_subtitle': product.time_limited_subtitle or '',
             'slug': self._get_slug(product.title, product.slug),
             'status': '1' if product.is_live else '0',
             'type': str(product.product_type.value),

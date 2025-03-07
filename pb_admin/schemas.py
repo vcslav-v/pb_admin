@@ -300,6 +300,8 @@ class NewProductLite(BaseModel):
 class NewProduct(NewProductLite):
     ident: int | None = None
     slug: str | None
+    expires_at: datetime | None
+    time_limited_subtitle: str | None
     excerpt: str
     description: str
     size: str
