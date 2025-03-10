@@ -70,7 +70,7 @@ class Products():
                     is_next_page = False
         return products
 
-    async def get(self, product_ident: int) -> schemas.NewProduct:
+    async def get(self, product_ident: int, with_login_downloads: bool = False) -> schemas.NewProduct:
         """Get product by id."""
         params = {
             'editing': 'true',
@@ -193,6 +193,39 @@ class Products():
                 count_downloads_unique=values.get('count_downloads_unique'),
                 count_downloads=values.get('count_downloads'),
             )
+        if not with_login_downloads:
+            return product
+
+        is_next_page = True
+        params = {
+            'search': '',
+            'filters': 'W10=',
+            'orderBy': '',
+            'perPage': '5',
+            'trashed': '',
+            'page': '1',
+            'viaResource': 'products',
+            'viaResourceId': product_ident,
+            'viaRelationship': 'downloadedUsers',
+            'relationshipType': 'belongsToMany'
+        }
+
+        while is_next_page:
+            async with self.session.get(
+                f'{self.site_url}/nova-api/users',
+                params=params
+            ) as resp:
+                resp.raise_for_status()
+                raw_data = await resp.json()
+                user_ids = [row['id']['value'] for row in raw_data['resources']]
+                product.downloaded_user_ids.extend(user_ids)
+                if raw_data.get('next_page_url'):
+                    parsed_url = urlparse(raw_data.get('next_page_url'))
+                    params.update(parse_qs(parsed_url.query))
+                else:
+                    product.login_downloads = int(raw_data['total'])
+                    is_next_page = False        
+
         return product
 
     async def update(self, product: schemas.NewProduct, is_lite: bool = False) -> schemas.NewProduct | None:

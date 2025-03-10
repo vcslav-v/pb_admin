@@ -300,8 +300,8 @@ class NewProductLite(BaseModel):
 class NewProduct(NewProductLite):
     ident: int | None = None
     slug: str | None
-    expires_at: datetime | None
-    time_limited_subtitle: str | None
+    expires_at: datetime | None = None
+    time_limited_subtitle: str | None = None
     excerpt: str
     description: str
     size: str
@@ -327,6 +327,8 @@ class NewProduct(NewProductLite):
     meta_keywords: str | None = None
     count_downloads_unique: int = 0
     count_downloads: int = 0
+    login_downloads: int = 0
+    downloaded_user_ids: list[int] = []
 
 
 class PaymentStatus(str, Enum):
