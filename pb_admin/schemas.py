@@ -329,6 +329,7 @@ class NewProduct(NewProductLite):
     count_downloads: int = 0
     login_downloads: int = 0
     downloaded_user_ids: list[int] = []
+    is_revenue_share: bool = False
 
 
 class PaymentStatus(str, Enum):
