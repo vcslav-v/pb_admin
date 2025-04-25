@@ -180,6 +180,9 @@ class Order(BaseModel):
     coupon: Optional[str] = None
     is_extended_license: bool
 
+    payments_sum: Optional[float] = None
+    coupon_id: Optional[int] = None
+
 
 class ArticleType(str, Enum):
     text = 'text'
