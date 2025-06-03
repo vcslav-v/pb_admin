@@ -61,22 +61,14 @@ class Orders():
         return orders
 
     async def get(self, order_id: int) -> schemas.Order:
-        params = {
-            'editing': 'true',
-            'editMode': 'update',
-            'viaResource': '',
-            'viaResourceId': '',
-            'viaRelationship': '',
-        }
         async with self.session.get(
-            f'{self.site_url}/nova-api/orders/{order_id}/update-fields',
-            params=params
+            f'{self.site_url}/nova-api/orders/{order_id}',
         ) as resp:
             resp.raise_for_status()
             raw_page = await resp.json()
 
             values = {}
-            for cell in raw_page['fields'].values():
+            for cell in raw_page['resource']['fields']:
                 if cell['attribute'] == 'user':
                     values['user_id'] = cell['belongsToId']
                 elif cell['attribute'] == 'Orderable':
@@ -92,7 +84,7 @@ class Orders():
 
             return schemas.Order(
                 ident=order_id,
-                is_payed=True if values.get('payed') == 1 else False,
+                is_payed=True if values.get('payed') == 'Payed' else False,
                 count=values.get('count'),
                 price=values.get('price'),
                 discounted_price=values.get('discounted_price'),
