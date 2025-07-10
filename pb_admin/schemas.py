@@ -352,3 +352,13 @@ class Payment(BaseModel):
     price_cent: int
     status: PaymentStatus
     created_at: datetime
+
+
+class Font(BaseModel):
+    ident: int | None = None
+    title: str
+    size: int = 40
+    top_indent: int = 0
+    data: bytes | None = None
+    file_name: str | None = None
+    mime_type: str | None = None

@@ -20,6 +20,7 @@ from pb_admin.orders import Orders
 from pb_admin.articles import Articles
 from pb_admin.creators import Creators
 from pb_admin.payments import Payments
+from pb_admin.fonts import Fonts
 from pb_admin import schemas
 
 SITE_URL = os.environ.get('SITE_URL', '')
@@ -61,6 +62,7 @@ class PbSession():
         self.articles = Articles(self.session, self.site_url, edit_mode)
         self.creators = Creators(self.session, self.site_url, edit_mode)
         self.payments = Payments(self.session, self.site_url, edit_mode)
+        self.fonts = Fonts(self.session, self.site_url, edit_mode)
 
     async def connect(self):
         async with self.session.get(f'{self.site_url}/admin/login') as resp:
