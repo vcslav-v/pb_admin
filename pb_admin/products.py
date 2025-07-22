@@ -26,6 +26,7 @@ class Products():
         self,
         search: str = '',
         per_page: int = 100,
+        limit: int | None = None
     ) -> list[schemas.NewProductLite]:
         products = []
         is_next_page = True
@@ -33,7 +34,7 @@ class Products():
             'perPage': str(per_page),
             'search': search,
         }
-        while is_next_page:
+        while is_next_page and (limit is None or len(products) < limit):
             async with self.session.get(f'{self.site_url}/nova-api/products', params=params) as resp:
                 resp.raise_for_status()
                 raw_page = await resp.json()

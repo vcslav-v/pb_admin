@@ -13,7 +13,7 @@ class Tags():
         self.site_url = site_url
         self.edit_mode = edit_mode
 
-    async def get_list(self, search: str = None) -> list[schemas.Tag]:
+    async def get_list(self, search: str = None, limit: int | None = None) -> list[schemas.Tag]:
         """Get list of all tags in short version id, name, title, description, meta_title, meta_description, no_index."""
         tags = []
         is_next_page = True
@@ -21,7 +21,7 @@ class Tags():
             'perPage': 100,
             'search': search or '',
         }
-        while is_next_page:
+        while is_next_page and (limit is None or len(tags) < limit):
             async with self.session.get(f'{self.site_url}/nova-api/tags', params=params) as resp:
                 resp.raise_for_status()
                 raw_page = await resp.json()
