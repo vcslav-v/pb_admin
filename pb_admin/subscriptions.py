@@ -10,14 +10,14 @@ class Subscriptions():
         self.site_url = site_url
         self.edit_mode = edit_mode
 
-    async def get_list(self, search: str = '') -> list[schemas.Subscription]:
+    async def get_list(self, search: str = '', limit: int | None = None) -> list[schemas.Subscription]:
         subscriptions = []
         is_next_page = True
         params = {
             'perPage': '100',
             'search': search,
         }
-        while is_next_page:
+        while is_next_page and (limit is None or len(subscriptions) < limit):
             async with self.session.get(f'{self.site_url}/nova-api/subscriptions', params=params) as resp:
                 resp.raise_for_status()
                 raw_page = await resp.json()
