@@ -41,3 +41,33 @@ class Users():
                 else:
                     is_next_page = False
         return users
+
+    async def get(self, user_id: int) -> schemas.PbUser:
+        async with self.session.get(f'{self.site_url}/nova-api/users/{user_id}') as resp:
+            resp.raise_for_status()
+            raw_user = await resp.json()
+            values = {}
+            for cell in raw_user['resource']['fields']:
+                if cell['attribute'] == 'email' and cell.get('thumbnailUrl'):
+                    values['userpic'] = cell['thumbnailUrl']
+                elif cell['attribute'] == 'options' and cell.get('fields'):
+                    for opt in cell.get('fields'):
+                        if opt['attribute'] == 'survey_type':
+                            values['survey_type'] = opt['value']
+                        elif opt['attribute'] == 'survey_areas':
+                            values['activity'] = [item['area'] for item in json.loads(opt['value'])]
+                values[cell['attribute']] = cell['value']
+            if values.get('survey_type') or values.get('activity'):
+                survey = schemas.UserSurvey(
+                    user_type=values.get('survey_type'),
+                    activity=values.get('activity', [])
+                )
+            else:
+                survey = None
+            return schemas.PbUser(
+                ident=values.get('id'),
+                name=values.get('name'),
+                email=values.get('email'),
+                userpic=values.get('userpic'),
+                survey=survey
+            )
