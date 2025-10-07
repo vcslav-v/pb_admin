@@ -51,3 +51,34 @@ class Subscriptions():
                 else:
                     is_next_page = False
         return subscriptions
+
+    async def get(self, subscription_id: int) -> schemas.Subscription:
+        async with self.session.get(f'{self.site_url}/nova-api/subscriptions/{subscription_id}') as resp:
+            resp.raise_for_status()
+            raw_sub = await resp.json()
+            values = {}
+            for cell in raw_sub['resource']['fields']:
+                if cell['attribute'] == 'user':
+                    values['user_id'] = cell['belongsToId']
+                elif cell['attribute'] == 'options' and cell.get('fields'):
+                    for opt in cell.get('fields'):
+                        if opt['attribute'] == 'history':
+                            json_history = json.loads(opt['value'])
+                            for entry in json_history:
+                                if entry.get('status') == 'active -> cancel':
+                                    values['cancel_reason'] = entry.get('reason')
+                else:
+                    values[cell['attribute']] = cell['value']
+            return schemas.Subscription(
+                ident=values.get('id'),
+                subscription_id=values.get('subscription_id'),
+                status=values.get('status'),
+                period=values.get('period'),
+                billing_plan=values.get('billingPlan'),
+                resubscribe=values.get('resubscribe'),
+                user_id=values.get('user_id'),
+                start_date=datetime.fromisoformat(values.get('start_date')) if values.get('start_date') else None,
+                end_date=datetime.fromisoformat(values.get('end_date')) if values.get('end_date') else None,
+                updated_at=datetime.fromisoformat(values.get('updated_at')) if values.get('updated_at') else None,
+                cancel_reason=values.get('cancel_reason')
+            )
