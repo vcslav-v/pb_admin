@@ -45,6 +45,7 @@ class Subscription(BaseModel):
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+    cancel_reason: Optional[str] = None
 
 
 class Image(BaseModel):
@@ -160,11 +161,16 @@ class Product(BaseModel):
     features_short: Optional[list[FeatureShort]] = []
 
 
+class UserSurvey(BaseModel):
+    user_type: str | None = None
+    activity: list[str] = []
+
 class PbUser(BaseModel):
     ident: int
     name: str
     email: str
     userpic: str | None = None
+    survey: UserSurvey | None = None
 
 
 class Order(BaseModel):
