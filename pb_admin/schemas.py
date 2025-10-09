@@ -368,3 +368,32 @@ class Font(BaseModel):
     data: bytes | None = None
     file_name: str | None = None
     mime_type: str | None = None
+
+
+class BannerType(str, Enum):
+    top = 'Top Banner'
+    recommended = 'Recommended bundle'
+    recommended_materials = 'Recommended bundle premiums'
+    catalog = 'Catalog bottom banner'
+    product = 'Product banner'
+    login = 'Login page'
+    download = 'Download banner'
+    material = 'Banner for material list'
+    sponsored = 'Sponsored'
+    stripe_lifetime = 'Stripe Lifetime'
+
+
+class BannerLite(BaseModel):
+    ident: int | None = None
+    banner_type: BannerType
+    is_active: bool = False
+    images: list[Image] = []
+    images_retina: list[Image] = []
+    weight: int = 0
+
+class Banner(BannerLite):
+    link: str | None = None
+    open_in_new_tab: bool = False
+    color: str | None = None
+    height: int | None = None
+    assigned_group_ids: list[int] = []
