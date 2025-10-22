@@ -397,3 +397,12 @@ class Banner(BannerLite):
     color: str | None = None
     height: int | None = None
     assigned_group_ids: list[int] = []
+
+
+class UserGroupLight(BaseModel):
+    ident: int
+    name: str
+    segment_id: int | None = None
+
+class UserGroup(UserGroupLight):
+    user_ids: list[int] = []
