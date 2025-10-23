@@ -131,7 +131,13 @@ class UserGroups():
                 allow_redirects=False,
                 params=params
             ) as resp:
-                resp.raise_for_status()
+                try:
+                    resp.raise_for_status()
+                except Exception as e:
+                    text = await resp.text()
+                    print(f'Error attaching user {user_id} to group {user_group_ident}: {e}\nResponse text: {text}')
+                    raise e
+            await sleep(0.1)  # To avoid overwhelming the server
         
         return True
     
