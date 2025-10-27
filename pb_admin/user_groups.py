@@ -117,14 +117,14 @@ class UserGroups():
             headers['Content-Type'] = f'multipart/form-data; boundary={boundary}'
 
             fields = {
-                'users': str(user_id),
-                'users_trashed': 'false',
-                'viaRelationship': 'users',
+                'user-groups': str(user_group_ident),
+                'user-groups_trashed': 'false',
+                'viaRelationship': 'groups',
             }
 
             form = MultipartEncoder(fields, boundary=boundary)
             async with self.session.post(
-                f'{self.site_url}/nova-api/user-groups/{user_group_ident}/attach-morphed/users',
+                f'{self.site_url}/nova-api/users/{user_id}/attach-morphed/user-groups',
                 data=form.to_string(),
                 headers=headers,
                 allow_redirects=False,
