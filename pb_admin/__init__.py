@@ -23,6 +23,7 @@ from pb_admin.payments import Payments
 from pb_admin.fonts import Fonts
 from pb_admin.banners import Banners
 from pb_admin.user_groups import UserGroups
+from pb_admin.public_licences import PublicLicences
 from pb_admin import schemas
 
 SITE_URL = os.environ.get('SITE_URL', '')
@@ -67,6 +68,7 @@ class PbSession():
         self.fonts = Fonts(self.session, self.site_url, edit_mode)
         self.banners = Banners(self.session, self.site_url, edit_mode)
         self.user_groups = UserGroups(self.session, self.site_url, edit_mode)
+        self.public_licences = PublicLicences(self.session, self.site_url, edit_mode)
 
     async def connect(self):
         async with self.session.get(f'{self.site_url}/admin/login') as resp:
