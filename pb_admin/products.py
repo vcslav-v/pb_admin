@@ -151,6 +151,8 @@ class Products():
                 elif cell.get('attribute') == 'options':
                     for opt_field in cell['fields']:
                         values[opt_field['attribute']] = opt_field['value']
+                elif cell.get('attribute') == 'license':
+                    values['license'] = cell['belongsToId']
                 else:
                     values[cell['attribute']] = cell['value']
 
@@ -194,6 +196,7 @@ class Products():
                 meta_keywords=values.get('meta_keywords'),
                 count_downloads_unique=values.get('count_downloads_unique'),
                 count_downloads=values.get('count_downloads'),
+                public_licence_id=values.get('license'),
             )
         if not with_login_downloads:
             return product
@@ -255,6 +258,7 @@ class Products():
             'only_registered_download': '1' if product.only_registered_download else '0',
             'creator': str(product.creator_id),
             'creator_trashed': 'false',
+            'license': str(product.public_licence_id) if product.public_licence_id else '',
             'special': '1' if product.is_special else '0',
             'excerpt': product.excerpt,
             'description': product.description,
@@ -336,6 +340,7 @@ class Products():
             'only_registered_download': '1' if product.only_registered_download else '0',
             'creator': str(product.creator_id),
             'creator_trashed': 'false',
+            'license': str(product.public_licence_id) if product.public_licence_id else '',
             'special': '1' if product.is_special else '0',
             'excerpt': product.excerpt,
             'description': product.description,

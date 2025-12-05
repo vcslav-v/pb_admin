@@ -23,6 +23,12 @@ class SubscriptionPeriod(str, Enum):
     MONTH = 'Month'
 
 
+class PublicLicense(BaseModel):
+    ident: int
+    name: str
+    url: str
+
+
 class Format(BaseModel):
     ident: int
     title: str = None
@@ -339,6 +345,7 @@ class NewProduct(NewProductLite):
     login_downloads: int = 0
     downloaded_user_ids: list[int] = []
     is_revenue_share: bool = False
+    public_licence_id: int | None = None
 
 
 class PaymentStatus(str, Enum):
