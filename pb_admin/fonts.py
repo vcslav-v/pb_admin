@@ -51,7 +51,7 @@ class Fonts():
             'title': font.title,
             'size': str(font.size),
             'indent': str(font.top_indent),
-            'file': (font.file_name, font.data, font.mime_type),
+            'file': (font.file_name.lower(), font.data, font.mime_type),
             'viaResource': '',
             'viaResourceId': '',
             'viaRelationship': '',
@@ -64,6 +64,7 @@ class Fonts():
             params=params,
             allow_redirects=False,
         ) as resp:
+            print(await resp.text())
             resp.raise_for_status()
             if is_lite:
                 return
