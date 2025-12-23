@@ -217,6 +217,120 @@ class Tags():
                 logger.error(resp.text)
                 raise Exception(resp.text)
 
+
+    async def get_all_tag_ids_in_category(self, category_ident: int) -> list[int]:
+        """Get all tag ids in category."""
+        tag_ids = []
+        page_id = config.CATEGORY_PAGE_MAP.get(category_ident)
+        if not page_id:
+            raise Exception(f'Category id {category_ident} not found in config.')
+        is_next_page = True
+        params = {
+            'search': '',
+            'filters': 'W10=',
+            'orderBy': '',
+            'perPage': 100,
+            'trashed': '',
+            'page': 1,
+            'viaResource': 'pages',
+            'viaResourceId': str(page_id),
+            'viaRelationship': 'tags',
+            'relationshipType': 'morphToMany',
+        }
+        while is_next_page:
+            async with self.session.get(
+                f'{self.site_url}/nova-api/tags',
+                params=params
+            ) as resp:
+                resp.raise_for_status()
+                raw_page = await resp.json()
+
+                tag_ids.extend([row['id']['value'] for row in raw_page['resources']])
+
+                if raw_page.get('next_page_url'):
+                    parsed_url = urlparse(raw_page.get('next_page_url'))
+                    params.update(parse_qs(parsed_url.query))
+                else:
+                    is_next_page = False
+        return tag_ids
+
+
+    async def add_to_category(self, tag_ident: int, category_ident: int) -> None:
+        """Add tag to category."""
+        if not self.edit_mode:
+            raise Exception('Edit mode is required.')
+        page_id = config.CATEGORY_PAGE_MAP.get(category_ident)
+        if not page_id:
+            raise Exception(f'Category id {category_ident} not found in config.')
+        boundary = str(uuid.uuid4())
+        headers = {
+            'Content-Type': f'multipart/form-data; boundary={boundary}',
+            'X-CSRF-TOKEN': self.session.cookie_jar.filter_cookies(self.site_url).get('XSRF-TOKEN').value,
+            'X-XSRF-TOKEN': self.session.cookie_jar.filter_cookies(self.site_url).get('XSRF-TOKEN').value,
+            'X-Requested-With': 'XMLHttpRequest',
+        }
+        fields = {
+            'tags': str(tag_ident),
+            'tags_trashed': 'false',
+            'viaRelationship': 'tags',
+        }
+
+        form = MultipartEncoder(fields, boundary=boundary)
+
+        params = {
+            'editing': 'true',
+            'editMode': 'attach',
+        }
+        async with self.session.post(
+            f'{self.site_url}/nova-api/pages/{page_id}/attach-morphed/tags',
+            params=params,
+            data=form.to_string(),
+            headers=headers,
+            allow_redirects=False
+        ) as resp:
+            if resp.status != 200:
+                try:
+                    error = await resp.json()
+                except Exception:
+                    error = await resp.text()
+                    logger.error(error)
+                    raise Exception(f'Error attaching tag {tag_ident} to category {category_ident}: {error}')
+                if error.get('message') and error['message'] == 'This tag is already attached.':
+                    logger.error(error['message'])
+                    return
+            resp.raise_for_status()
+
+    async def remove_from_category(self, tag_ident: int, category_ident: int) -> None:
+        """Remove tag from category."""
+        if not self.edit_mode:
+            raise Exception('Edit mode is required.')
+        page_id = config.CATEGORY_PAGE_MAP.get(category_ident)
+        if not page_id:
+            raise Exception(f'Category id {category_ident} not found in config.')
+        headers = {
+            'X-CSRF-TOKEN': self.session.cookie_jar.filter_cookies(self.site_url).get('XSRF-TOKEN').value,
+            'X-XSRF-TOKEN': self.session.cookie_jar.filter_cookies(self.site_url).get('XSRF-TOKEN').value,
+            'X-Requested-With': 'XMLHttpRequest',
+        }
+
+        params = {
+            'search': '',
+            'filters': 'W10=',
+            'trashed': '',
+            'viaResource': 'pages',
+            'viaResourceId': str(page_id),
+            'viaRelationship': 'tags',
+            'resources[]': str(tag_ident),
+        }
+        async with self.session.delete(
+            f'{self.site_url}/nova-api/tags/detach',
+            params=params,
+            headers=headers,
+            allow_redirects=False
+        ) as resp:
+            text = await resp.text()
+            resp.raise_for_status()
+
     @staticmethod
     def fill_scheme_by_policy(tag: schemas.Tag) -> schemas.Tag:
         title = tag.name.capitalize()
