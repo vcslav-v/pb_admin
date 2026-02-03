@@ -25,7 +25,11 @@ class Payments():
                 for row in raw_page['resources']:
                     values = {}
                     for cell in row['fields']:
-                        values[cell['attribute']] = cell['value']
+                        if cell['attribute'] in ['order']:
+                            values[cell['attribute']] = cell['belongsToId']
+                        else:
+                            values[cell['attribute']] = cell['value']
+                        
 
                     payments.append(
                         schemas.Payment(
