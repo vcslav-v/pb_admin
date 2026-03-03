@@ -65,10 +65,37 @@ class Users():
                 )
             else:
                 survey = None
-            return schemas.PbUser(
-                ident=values.get('id'),
-                name=values.get('name'),
-                email=values.get('email'),
-                userpic=values.get('userpic'),
-                survey=survey
-            )
+
+        is_next_page = True
+        params = {
+            'search': '',
+            'filters': 'W10=',
+            'orderBy': '',
+            'perPage': '5',
+            'trashed': '',
+            'page': '1',
+            'viaResource': 'users',
+            'viaResourceId': str(user_id),
+            'viaRelationship': 'groups',
+            'relationshipType': 'morphToMany'
+        }
+        user_group_ids = []
+        while is_next_page:
+            async with self.session.get(f'{self.site_url}/nova-api/user-groups', params=params) as resp:
+                resp.raise_for_status()
+                raw_page = await resp.json()
+                for row in raw_page['resources']:
+                    user_group_ids.append(row['id']['value'])
+                if raw_page.get('next_page_url'):
+                    parsed_url = urlparse(raw_page.get('next_page_url'))
+                    params.update(parse_qs(parsed_url.query))
+                else:
+                    is_next_page = False
+        return schemas.PbUser(
+            ident=values.get('id'),
+            name=values.get('name'),
+            email=values.get('email'),
+            userpic=values.get('userpic'),
+            survey=survey,
+            user_group_ids=user_group_ids
+        )

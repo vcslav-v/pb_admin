@@ -177,6 +177,7 @@ class PbUser(BaseModel):
     email: str
     userpic: str | None = None
     survey: UserSurvey | None = None
+    user_group_ids: list[int] = []
 
 
 class Order(BaseModel):
