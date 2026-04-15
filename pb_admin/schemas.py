@@ -14,6 +14,7 @@ class SubscriptionStatus(str, Enum):
     ACTIVE = 'Active'
     CANCEL = 'Cancel'
     EXPIRED = 'Expired'
+    UPGRADED = 'Upgraded'
 
 
 class SubscriptionPeriod(str, Enum):
