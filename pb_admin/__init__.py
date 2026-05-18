@@ -10,6 +10,7 @@ import os
 from bs4 import BeautifulSoup
 
 from pb_admin.tags import Tags
+from pb_admin.index_tags import IndexTags
 from pb_admin.categories import Categories
 from pb_admin.products import Products
 from pb_admin.tools import Tools
@@ -55,6 +56,7 @@ class PbSession():
         )
 
         self.tags = Tags(self.session, self.site_url, edit_mode)
+        self.index_tags = IndexTags(self.session, self.site_url, edit_mode)
         self.categories = Categories(self.session, self.site_url, edit_mode)
         self.products = Products(self.session, self.site_url, edit_mode)
         self.tools = Tools(self.session, self.site_url, edit_mode)

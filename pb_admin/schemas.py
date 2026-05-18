@@ -89,6 +89,28 @@ class Tag(BaseModel):
     sub_tags_ids: list[int] = []
     is_group: bool = False
 
+class FAQItem(BaseModel):
+    key: Optional[str] = None
+    question: str
+    answer: str
+
+class IndexTag(BaseModel):
+    ident: Optional[int] = None
+    title: Optional[str] = None
+    slug: Optional[str] = None
+    weight: Optional[int] = None
+    no_index: bool = True
+    category_id: Optional[int] = None
+    relevanted_tags_ids: list[int] = []
+    desktop_tags_count: Optional[int] = None
+    tablet_tags_count: Optional[int] = None
+    mobile_tags_count: Optional[int] = None
+    excerpt: Optional[str] = None
+    description: Optional[str] = None
+    faq: Optional[list[FAQItem]] = None
+    meta_title: Optional[str] = None
+    meta_description: Optional[str] = None
+
 
 class FeatureShort(BaseModel):
     title: str
