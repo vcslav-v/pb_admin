@@ -135,7 +135,7 @@ class IndexTags():
         fields = {
             'title': tag.title,
             'slug': tag.slug,
-            'weight': str(tag.weight) if tag.weight is not None else '',
+            'weight': str(tag.weight) if tag.weight is not None else '0',
             'no_index': '1' if tag.no_index else '0',
             'category': str(tag.category_id) if tag.category_id is not None else '',
             'category_trashed': 'false',
@@ -203,7 +203,7 @@ class IndexTags():
         fields = {
             'title': updated_tag.title,
             'slug': updated_tag.slug,
-            'weight': str(updated_tag.weight) if updated_tag.weight is not None else '',
+            'weight': str(updated_tag.weight) if updated_tag.weight is not None else '0',
             'no_index': '1' if updated_tag.no_index else '0',
             'category': str(updated_tag.category_id) if updated_tag.category_id is not None else '',
             'category_trashed': 'false',
