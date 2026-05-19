@@ -357,6 +357,7 @@ class NewProduct(NewProductLite):
     vps_path: str | None
     s3_path: str | None
     tags_ids: list[int] = []
+    index_tag_ids: list[int] = []
     font_ids: list[int] = []
     formats: str | None
     custom_btn_text: str | None = None

@@ -157,6 +157,7 @@ class Products():
                     values[cell['attribute']] = cell['value']
 
             values['tag_ids'] = await self._get_tag_ids(product_ident)
+            values['index_tag_ids'] = await self._get_index_tag_ids(product_ident)
             values['font_ids'] = await self._get_fonts(product_ident)
             product = schemas.NewProduct(
                 ident=str(product_ident),
@@ -188,6 +189,7 @@ class Products():
                 s3_path=values.get('s3_path'),
                 formats=values.get('formats'),
                 tags_ids=values.get('tag_ids'),
+                index_tag_ids=values.get('index_tag_ids'),
                 font_ids=values.get('font_ids'),
                 custom_btn_text=values.get('custom_btn_text'),
                 custom_btn_url=values.get('custom_btn_url'),
@@ -274,6 +276,7 @@ class Products():
             'category': str(product.category_id),
             'category_trashed': 'false',
             'tags': str(product.tags_ids),
+            'index_tags': str(product.index_tag_ids),
             'is_revenue_share': '1' if product.is_revenue_share else '0',
             'options[image_border]': '1' if product.image_border else '0',
             'options[formats]': product.formats,
@@ -357,6 +360,7 @@ class Products():
             'category': str(product.category_id),
             'category_trashed': 'false',
             'tags': str(product.tags_ids),
+            'index_tags': str(product.index_tag_ids),
             'is_revenue_share': '1' if product.is_revenue_share else '0',
             'options[formats]': product.formats,
             'options[custom_btn_text]': product.custom_btn_text,
@@ -430,6 +434,12 @@ class Products():
                 else:
                     is_next_page = False
         return tag_ids
+
+    async def _get_index_tag_ids(self, product_ident: int) -> list[int]:
+        async with self.session.get(f'{self.site_url}/nova-vendor/nova-attach-many/products/{product_ident}/attachable/index_tags') as resp:
+            resp.raise_for_status()
+            raw_page = await resp.json()
+            return raw_page['selected']
 
     async def _get_fonts(self, product_ident: int) -> list[int]:
         font_ids = []
