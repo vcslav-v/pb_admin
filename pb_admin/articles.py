@@ -219,6 +219,8 @@ class Articles():
                     result.link_url = attr['value']
                 elif attr['attribute'] == 'link_text':
                     result.link_text = attr['value']
+                elif attr['attribute'] == 'image':
+                    result.image_url = attr['previewUrl']
         elif article_type == schemas.ArticleType.video:
             result = schemas.ArticleVideo(
                 layout=article_type,
@@ -259,6 +261,8 @@ class Articles():
                     result.image_alt = attr['value']
                 elif attr['attribute'] == 'image_title':
                     result.image_title = attr['value']
+                elif attr['attribute'] == 'image':
+                    result.image_url = attr['previewUrl']
         return result
 
     @staticmethod

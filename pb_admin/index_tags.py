@@ -8,6 +8,7 @@ from loguru import logger
 from requests_toolbelt import MultipartEncoder
 import uuid
 from datetime import datetime
+import json
 
 
 class IndexTags():
@@ -231,7 +232,7 @@ class IndexTags():
                         f'{key}-faq__description': faq.answer,
                     }
                 })
-            fields['options__faq'] = str(faq_fields).replace("'", '"')
+            fields['options__faq'] = json.dumps(faq_fields)
 
         params = {'editing': 'true', 'editMode': 'update'}
 
@@ -252,6 +253,51 @@ class IndexTags():
             else:
                 logger.error(resp.text)
                 raise Exception(resp.text)
+
+    async def add_to_category(self, tag_ident: int, category_ident: int) -> None:
+        """Add tag to category."""
+        if not self.edit_mode:
+            raise Exception('Edit mode is required.')
+        page_id = config.CATEGORY_PAGE_MAP.get(category_ident)
+        if not page_id:
+            raise Exception(f'Category id {category_ident} not found in config.')
+        boundary = str(uuid.uuid4())
+        headers = {
+            'Content-Type': f'multipart/form-data; boundary={boundary}',
+            'X-CSRF-TOKEN': self.session.cookie_jar.filter_cookies(self.site_url).get('XSRF-TOKEN').value,
+            'X-XSRF-TOKEN': self.session.cookie_jar.filter_cookies(self.site_url).get('XSRF-TOKEN').value,
+            'X-Requested-With': 'XMLHttpRequest',
+        }
+        fields = {
+            'tags': str(tag_ident),
+            'tags_trashed': 'false',
+            'viaRelationship': 'index_tags',
+        }
+
+        form = MultipartEncoder(fields, boundary=boundary)
+
+        params = {
+            'editing': 'true',
+            'editMode': 'attach',
+        }
+        async with self.session.post(
+            f'{self.site_url}/nova-api/pages/{page_id}/attach-morphed/index_tags',
+            params=params,
+            data=form.to_string(),
+            headers=headers,
+            allow_redirects=False
+        ) as resp:
+            if resp.status != 200:
+                try:
+                    error = await resp.json()
+                except Exception:
+                    error = await resp.text()
+                    logger.error(error)
+                    raise Exception(f'Error attaching tag {tag_ident} to category {category_ident}: {error}')
+                if error.get('message') and error['message'] == 'This tag is already attached.':
+                    logger.error(error['message'])
+                    return
+            resp.raise_for_status()
 
     @staticmethod
     def generate_layout_key(length=21):

@@ -242,6 +242,7 @@ class ArticleCard(BaseModel):
     button_text: str = ''
     link_url: str = ''
     link_text: str = ''
+    image_url: str = ''
 
 
 class ArticleVideo(BaseModel):
@@ -268,6 +269,7 @@ class ArticleImage(BaseModel):
     nofollow: bool = False
     image_alt: str = ''
     image_title: str = ''
+    image_url: str = ''
 
 
 class Article(BaseModel):
