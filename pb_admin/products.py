@@ -199,6 +199,7 @@ class Products():
                 count_downloads_unique=values.get('count_downloads_unique'),
                 count_downloads=values.get('count_downloads'),
                 public_licence_id=values.get('license'),
+                is_exclusive=values.get('is_exclusive', False)
             )
         if not with_login_downloads:
             return product

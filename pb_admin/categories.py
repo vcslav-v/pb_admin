@@ -71,3 +71,49 @@ class Categories():
                 values = {cell['attribute']: cell['value'] for cell in raw_data['fields'][0]['fields']}
                 category.slug = values.get('slug')
         return categories
+
+    async def get(self, category_id: int) -> schemas.Category:
+        """Get category by id."""
+        async with self.session.get(f'{self.site_url}/nova-api/categories/{category_id}') as resp:
+            resp.raise_for_status()
+            raw_data = await resp.json()
+            values = {cell['attribute']: cell['value'] for cell in raw_data['resource']['fields']}
+            category = schemas.Category(
+                ident=values.get('id'),
+                title=values.get('title'),
+                is_display=values.get('display_menu'),
+                headline=values.get('headline'),
+                weight=values.get('sort'),
+                is_shown_in_filter=values.get('show_in_filter'),
+                image=schemas.Image(
+                    ident=values['category_image'][0]['id'],
+                    mime_type=values['category_image'][0]['mime_type'],
+                    original_url=values['category_image'][0]['original_url'],
+                    file_name=values['category_image'][0]['file_name'],
+                ) if values.get('category_image') else None,
+                image_retina=schemas.Image(
+                    ident=values['category_image_retina'][0]['id'],
+                    mime_type=values['category_image_retina'][0]['mime_type'],
+                    original_url=values['category_image_retina'][0]['original_url'],
+                    file_name=values['category_image_retina'][0]['file_name'],
+                ) if values.get('category_image_retina') else None,
+                description=values.get('description'),
+                meta_title=(values.get('options') or {}).get('meta_title'),
+                meta_description=(values.get('options') or {}).get('meta_description'),
+            )
+        params = {
+            'editing': 'true',
+            'editMode': 'update',
+            'viaResource': '',
+            'viaResourceId': '',
+            'viaRelationship': '',
+        }
+        async with self.session.get(
+            f'{self.site_url}/nova-api/categories/{category.ident}/update-fields',
+            params=params
+        ) as resp:
+            resp.raise_for_status()
+            raw_data = await resp.json()
+            values = {cell['attribute']: cell['value'] for cell in raw_data['fields'][0]['fields']}
+            category.slug = values.get('slug')
+        return category

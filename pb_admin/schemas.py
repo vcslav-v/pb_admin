@@ -74,6 +74,9 @@ class Category(BaseModel):
     is_shown_in_filter: bool
     image: Optional[Image] = None
     image_retina: Optional[Image] = None
+    description: Optional[str] = None
+    meta_title: Optional[str] = None
+    meta_description: Optional[str] = None
 
 
 class Tag(BaseModel):
@@ -373,6 +376,7 @@ class NewProduct(NewProductLite):
     downloaded_user_ids: list[int] = []
     is_revenue_share: bool = False
     public_licence_id: int | None = None
+    is_exclusive: bool | None = None
 
 
 class PaymentStatus(str, Enum):
